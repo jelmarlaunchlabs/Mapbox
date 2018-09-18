@@ -17,7 +17,7 @@ namespace MapBox.Android
 
         public static void init(Context context, string accessToken)
         {
-            Com.Mapbox.Mapboxsdk.Mapbox.GetInstance(context, "pk.eyJ1IjoiY3Jvd2VsbW8iLCJhIjoiY2ptNjU5MnFoMTdlYTN3bjIxdDRlb3Q4MyJ9.kg7ws7RpJ4nIKL8C31nBDw");
+            Com.Mapbox.Mapboxsdk.Mapbox.GetInstance(context, accessToken);
         }
 
         public Class1Renderer(Context context) : base(context)

@@ -7,6 +7,7 @@
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<application android:label="MapboxTester.Android">
+<!--        This is not actually needed for the basic map to work-->
 <!--        <service android:name="com.mapbox.mapboxsdk.telemetry.TelemetryService"/>-->
     </application>
 </manifest>
