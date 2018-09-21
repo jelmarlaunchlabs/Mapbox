@@ -15,4 +15,16 @@
   <ItemGroup>
     <ProjectReference Include="..\MapBox\MapBox.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Remove="carBlack.jpg" />
+    <None Remove="Resources\car.png" />
+    <None Remove="Resources\carBlack.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\car.png" />
+    <EmbeddedResource Include="Resources\carBlack.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Resources\" />
+  </ItemGroup>
 </Project>

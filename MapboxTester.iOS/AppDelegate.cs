@@ -23,7 +23,9 @@ namespace MapboxTester.iOS
         public override bool FinishedLaunching(UIApplication app, NSDictionary options)
         {
             global::Xamarin.Forms.Forms.Init();
-            LoadApplication(new App());
+			Mapbox.MGLAccountManager.AccessToken = "pk.eyJ1IjoiY3Jvd2VsbW8iLCJhIjoiY2ptNjU5MnFoMTdlYTN3bjIxdDRlb3Q4MyJ9.kg7ws7RpJ4nIKL8C31nBDw";
+			Mapbox.iOS.MapboxRenderer.init();
+			LoadApplication(new App());
 
             return base.FinishedLaunching(app, options);
         }

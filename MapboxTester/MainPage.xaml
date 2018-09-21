@@ -4,5 +4,7 @@
              xmlns:local="clr-namespace:MapboxTester"
              xmlns:mapbox="clr-namespace:MapBox;assembly=MapBox"
              x:Class="MapboxTester.MainPage">
-    <mapbox:Class1/>
+    <mapbox:Map x:Name="map"/>
+    <!--<mapbox:TestImage HorizontalOptions="Center"
+                      VerticalOptions="Center"/>-->
 </ContentPage>

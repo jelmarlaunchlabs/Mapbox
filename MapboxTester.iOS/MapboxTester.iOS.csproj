@@ -26,7 +26,7 @@
     <WarningLevel>4</WarningLevel>
     <ConsolePause>false</ConsolePause>
     <MtouchArch>x86_64</MtouchArch>
-    <MtouchLink>None</MtouchLink>
+    <MtouchLink>SdkOnly</MtouchLink>
     <MtouchDebug>true</MtouchDebug>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|iPhoneSimulator' ">
@@ -149,12 +149,19 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Xamarin.Forms" Version="3.0.0.482510" />
+    <PackageReference Include="Naxam.Mapbox.iOS">
+      <Version>4.3.0.3</Version>
+    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\iOS\Xamarin.iOS.CSharp.targets" />
   <ItemGroup>
     <ProjectReference Include="..\MapboxTester\MapboxTester.csproj">
       <Project>{138D258B-B44B-4EBF-A879-6EC53168E563}</Project>
       <Name>MapboxTester</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Mapbox.iOS\Mapbox.iOS.csproj">
+      <Project>{FBE953D5-AF3A-40AE-A870-AFE89B93715C}</Project>
+      <Name>Mapbox.iOS</Name>
     </ProjectReference>
   </ItemGroup>
 </Project>
