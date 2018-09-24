@@ -4,6 +4,10 @@ using Xamarin.Forms;
 
 namespace MapBox
 {
+	/// <summary>
+	/// IMPORTANT NOTE: For now, succeeding pins in the pins list will inherit the size of the first
+	/// pin image if it happens to be the same image source, to override this there is imageScaleFactor to temporarily fix this.
+	/// </summary>
 	public class Pin : BindableObject
 	{
 		public static readonly BindableProperty imageProperty = BindableProperty.Create(
@@ -11,7 +15,7 @@ namespace MapBox
 			typeof(string),
 			typeof(Pin),
 			default(string),
-			BindingMode.TwoWay,
+			BindingMode.OneWay,
 			propertyChanged: (bindable, p1, p2) => {
 				var view = bindable as Pin;
 				var newValue = (string)p2;
@@ -27,7 +31,7 @@ namespace MapBox
 			typeof(bool),
 			typeof(Pin),
 			default(bool),
-			BindingMode.TwoWay,
+			BindingMode.OneWay,
 			propertyChanged: (bindable, p1, p2) => {
 				var view = bindable as Pin;
 				var newValue = (bool)p2;
@@ -43,7 +47,7 @@ namespace MapBox
 			typeof(double),
 			typeof(Pin),
 			default(double),
-			BindingMode.TwoWay,
+			BindingMode.OneWay,
 			propertyChanged: (bindable, p1, p2) => {
 				var view = bindable as Pin;
 				var newValue = (double)p2;
@@ -64,7 +68,7 @@ namespace MapBox
 			typeof(double),
 			typeof(Pin),
 			(double)50,
-			BindingMode.TwoWay,
+			BindingMode.OneWay,
 			propertyChanged: (bindable, p1, p2) => {
 				var view = bindable as Pin;
 				var newValue = (double)p2;
@@ -84,7 +88,7 @@ namespace MapBox
 			typeof(double),
 			typeof(Pin),
 			(double)50,
-			BindingMode.TwoWay,
+			BindingMode.OneWay,
 			propertyChanged: (bindable, p1, p2) => {
 				var view = bindable as Pin;
 				var newValue = (double)p2;
@@ -104,7 +108,7 @@ namespace MapBox
 			typeof(double),
 			typeof(Pin),
 			(double)1,
-			BindingMode.TwoWay,
+			BindingMode.OneWay,
 			propertyChanged: (bindable, p1, p2) => {
 				var view = bindable as Pin;
 				var newValue = (double)p2;
@@ -124,7 +128,7 @@ namespace MapBox
 			typeof(Position),
 			typeof(Pin),
 			default(Position),
-			BindingMode.TwoWay,
+			BindingMode.OneWay,
 			propertyChanged: (bindable, p1, p2) => {
 				var view = bindable as Pin;
 				view.previousPinPosition = (Position)p1;
@@ -136,6 +140,28 @@ namespace MapBox
 			get { return (Position)GetValue(positionProperty); }
 			set { SetValue(positionProperty, value); }
 		}
+
+		public static readonly BindableProperty iconOffsetProperty = BindableProperty.Create(
+			nameof(iconOffset),
+			typeof(Point),
+			typeof(Pin),
+			new Point(0,0),
+			BindingMode.OneWay,
+			propertyChanged: (bindable, p1, p2) => {
+				var view = bindable as Pin;
+				var newValue = (Point)p2;
+			}
+		);
+		/// <summary>
+		/// Positive values indicate right and down, ignored if IsCenterAndFlat = false
+		/// https://www.mapbox.com/mapbox-gl-js/style-spec/#layout-symbol-icon-offset
+		/// </summary>
+		/// <value>The icon offset.</value>
+		public Point iconOffset {
+			get { return (Point)GetValue(iconOffsetProperty); }
+			set { SetValue(iconOffsetProperty, value); }
+		}
+
 		public Position previousPinPosition { get; set; }
 
 		public Pin()

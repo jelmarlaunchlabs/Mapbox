@@ -14,17 +14,15 @@ namespace MapboxTester
     {
         public MainPage()
         {
-			//"Resources.car.png
-			//Resources.carBlack.jpg
-
 			InitializeComponent();
 			// Initialize pins
 			map.pins = new ObservableCollection<Pin>{
 				new Pin{
 					image = "Resources.car.png",
 					IsCenterAndFlat = false,
-					heading = 90,
-					position = new Position(0,0)
+					heading = 0,
+					position = new Position(0,0),
+					iconOffset = new Point(0,-50)
 				},
 				new Pin{
 					image = "Resources.car.png",
@@ -64,7 +62,7 @@ namespace MapboxTester
 				Device.StartTimer(TimeSpan.FromSeconds(10), () => {
 					map.pins.Remove(map.pins[2]);
 
-					// Clear pins
+					//// Clear pins
 					//Device.StartTimer(TimeSpan.FromSeconds(10), () => {
 					//map.pins.Clear();
 

@@ -9,14 +9,28 @@ using Xamarin.Forms;
 using Xamarin.Forms.Platform.iOS;
 using MapBox.Extensions;
 using System.Linq;
+using System.Collections.Specialized;
+using Mapbox.iOS.Extensions;
 
 [assembly: ExportRenderer(typeof(MapBox.Map), typeof(Mapbox.iOS.MapboxRenderer))]
 namespace Mapbox.iOS
 {
-    public class MapboxRenderer : ViewRenderer<Map, MGLMapView>, IMGLMapViewDelegate
-    {
-		private MGLMapView nMap;
+    public class MapboxRenderer : ViewRenderer<Map, MGLMapView>, IMGLMapViewDelegate, IUIGestureRecognizerDelegate
+	{
+		public const string mapLockedPinsKey = nameof(mapLockedPinsKey);
+		public const string mapLockedPinsSourceKey = nameof(mapLockedPinsSourceKey);
+
+		public const string normalPinsKey = nameof(normalPinsKey);
+		public const string normalPinsSourceKey = nameof(normalPinsSourceKey);
+
+		public const string pin_image_key = nameof(pin_image_key);
+		public const string pin_rotation_key = nameof(pin_rotation_key);
+		public const string pin_size_key = nameof(pin_size_key);
+		public const string pin_offset_key = nameof(pin_offset_key);
+
 		private Map xMap;
+		private MGLMapView nMap;
+		private MGLStyle nStyle;
 
 		public static void init()
         {
@@ -33,11 +47,24 @@ namespace Mapbox.iOS
 			}
 			if (e.OldElement != null) {
 				// Unsubscribe
+				var map = e.NewElement;
+
+				// Unsubscribe to changes in the collection first
+				if (map.pins != null)
+					map.pins.CollectionChanged -= Pins_CollectionChanged;
+
+				//Then remove all pins
+				removeAllPins();
+
+				// Unubscribe to changes in map bindable properties
+				map.PropertyChanged -= Map_PropertyChanged;
 			}
 			if (e.NewElement != null) {
 				// Subscribe
 				var map = e.NewElement;
 				xMap = map;
+
+				// Additional operations will be handled in OnMapReady to apply delay
 			}
 		}
 
@@ -52,84 +79,281 @@ namespace Mapbox.iOS
 		[Export("mapView:didFinishLoadingStyle:")]
 		public void didFinishLoadingStyle(MGLMapView mGLMapView, MGLStyle mGLStyle)
 		{
-			testMarker(mGLStyle);
-			//testPolyline(mGLStyle);
+			nMap = mGLMapView;
+			nStyle = mGLStyle;
+			setupGestureRecognizer();
+
+			// Add all pin first
+			initializePinsLayer();
+			addAllReusablePinImages();
+			addAllPins();
+
+			// Then subscribe to pins added
+			if (xMap.pins != null)
+				xMap.pins.CollectionChanged += Pins_CollectionChanged;
+
+			// Subscribe to changes in map bindable properties after all pins are loaded
+			xMap.PropertyChanged += Map_PropertyChanged;
+
+			// Temp calibrator marker
+			nMap.AddAnnotation(
+				new MGLPointAnnotation {
+					Coordinate = new CLLocationCoordinate2D(0, 0)
+				});
 		}
 
-		private void testMarker(MGLStyle style)
+		private void setupGestureRecognizer()
 		{
-			var x = new Dictionary<NSString, NSObject> {
-				{new NSString("type"), NSString.FromObject("carBlack")}
-			};
-			var d = NSDictionary<NSString, NSObject>.FromObjectsAndKeys(x.Values.ToArray(), x.Keys.ToArray());
+			var tapGest = new UITapGestureRecognizer();
+			tapGest.NumberOfTapsRequired = 1;
+			tapGest.CancelsTouchesInView = false;
+			tapGest.Delegate = this;
+			nMap.AddGestureRecognizer(tapGest);
+			tapGest.AddTarget((NSObject obj) => {
+				var gesture = obj as UITapGestureRecognizer;
+				if (gesture.State == UIGestureRecognizerState.Ended) {
+					var point = gesture.LocationInView(nMap);
+					var touchedCooridinate = nMap.ConvertPoint(point, nMap);
+					var position = new MapBox.Models.Position(touchedCooridinate.Latitude, touchedCooridinate.Longitude);
+					var features = nMap.VisibleFeaturesAtPoint(point, new NSSet<NSString>(new NSString[] { new NSString(mapLockedPinsKey), new NSString(normalPinsKey) }));
 
-			var x2 = new Dictionary<NSString, NSObject> {
-				{new NSString("type"), NSString.FromObject("car")}
-			};
-
-			NSDictionary<NSString, NSObject>.FromObjectsAndKeys(
-				new object[]{
-					"carBlack",
-				},
-				new object[]{
-					"type"
-				});
-
-			var d2 = NSDictionary<NSString, NSObject>.FromObjectsAndKeys(x2.Values.ToArray(), x2.Keys.ToArray());
-
-			var features = new List<NSObject> {
-				new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(0,0), Attributes = d},
-				new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(1,1), Attributes = d2},
-				new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(2,2), Attributes = d},
-				new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(3,3), Attributes = d2},
-				new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(4,4), Attributes = d},
-				new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(5,5), Attributes = d2}
-			};
-
-			// Set the geoJsonSource
-			var geoJsonSource = new MGLShapeSource("us-lighthouses", features.ToArray(), null);
-			style.AddSource(geoJsonSource);
-
-			// Init actual image
-			UIImage uIImage = null;
-			using (var stream = "Resources.car.png".getRawStremFromEmbeddedResource(xMap.callerAssembly, 50, 50))
-			using (var imageData = NSData.FromStream(stream))
-				uIImage = UIImage.LoadFromData(imageData);
-			style.SetImage(uIImage, "car");
-
-
-			UIImage uIImage2 = null;
-			using (var stream = "Resources.carBlack.jpg".getRawStremFromEmbeddedResource(xMap.callerAssembly, 50, 50))
-			using (var imageData = NSData.FromStream(stream))
-				uIImage2 = UIImage.LoadFromData(imageData);
-			style.SetImage(uIImage2, "carBlack");
-
-			// Set the layer
-			var layer = new MGLSymbolStyleLayer("marker-layer", geoJsonSource);
-			layer.IconImageName = NSExpression.FromKeyPath("type");
-			//layer.IconImageName = NSExpression.FromConstant(NSObject.FromObject("{type}"));
-			layer.IconRotationAlignment = NSExpression.FromConstant(NSObject.FromObject("map"));
-			layer.IconRotation = NSExpression.FromConstant(NSObject.FromObject(90f));
-			layer.IconAllowsOverlap = NSExpression.FromConstant(NSObject.FromObject(true));
-			style.AddLayer(layer);
-
-			// Update new location
-			Device.StartTimer(TimeSpan.FromSeconds(5), () => {
-				// Update new location
-				var features2 = new List<NSObject> {
-						new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(10,10), Attributes = d},
-						new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(11,11), Attributes = d2},
-						new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(12,12), Attributes = d},
-						new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(13,13), Attributes = d2},
-						new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(14,14), Attributes = d},
-						new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(15,15), Attributes = d2}
-					};
-
-				// Updated the location
-				geoJsonSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(features2.ToArray());
-				return false;
+					if (features.Any() && xMap.pinClickedCommand != null)
+						xMap.pinClickedCommand.Execute(null);
+				}
 			});
 		}
+
+		#region Pin intializers
+		private void initializePinsLayer()
+		{
+			// Just initialize with empty so that it's guaranteed that there are sources initiated
+			// when the pins collection is still null
+			var mapLockedPinsSource = new MGLShapeSource(mapLockedPinsSourceKey, new NSObject[]{}, null);
+			nStyle.AddSource(mapLockedPinsSource);
+
+			// Pins with bearings layer - configure elements
+			var mapLockedPinsLayer = new MGLSymbolStyleLayer(mapLockedPinsKey, mapLockedPinsSource) {
+				IconImageName = NSExpression.FromKeyPath(pin_image_key),
+				IconRotation = NSExpression.FromKeyPath(pin_rotation_key),
+				IconScale = NSExpression.FromKeyPath(pin_size_key),
+				IconRotationAlignment = NSExpression.FromConstant(NSObject.FromObject("map")), // Finally the map-lock flat = "map"
+				IconAllowsOverlap = NSExpression.FromConstant(NSObject.FromObject(true)) // Always overlap
+			};
+			nStyle.AddLayer(mapLockedPinsLayer);
+
+			// Just initialize with empty so that it's guaranteed that there are sources initiated
+			// when the pins collection is still null
+			var normalPinsSource = new MGLShapeSource(normalPinsSourceKey, new NSObject[] { }, null);
+			nStyle.AddSource(normalPinsSource);
+
+			// Normal pins layer - configure elements
+			var normalPinsLayer = new MGLSymbolStyleLayer(normalPinsKey, normalPinsSource) {
+				IconImageName = NSExpression.FromKeyPath(pin_image_key),
+				IconScale = NSExpression.FromKeyPath(pin_size_key),
+				IconOffset = NSExpression.FromKeyPath(pin_offset_key), //https://www.mapbox.com/mapbox-gl-js/style-spec/#layout-symbol-icon-offset
+				IconAnchor = NSExpression.FromConstant(NSObject.FromObject("bottom")), // https://www.mapbox.com/mapbox-gl-js/style-spec/#layout-symbol-icon-anchor = "bottom" or "center"
+				IconAllowsOverlap = NSExpression.FromConstant(NSObject.FromObject(true))
+			};
+			nStyle.AddLayer(normalPinsLayer);
+		}
+
+		private void addAllReusablePinImages()
+		{
+			foreach (var pin in xMap.pins) {
+				var uiImage = nStyle.ImageForName(pin.image);
+
+				// If any existing item does not yet exist
+				if (uiImage == null) {
+					// Then add new image
+					using (var stream = pin.image.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.width, pin.height)) {
+						using (var imageData = NSData.FromStream(stream)) {
+							var newUIImage = UIImage.LoadFromData(imageData);
+							nStyle.SetImage(newUIImage, pin.image);
+						}
+					}
+				}
+			}
+		}
+
+		private void addAllPins()
+		{
+			if (xMap.pins == null)
+				return;
+
+			// Subscribe all pins to their respective changes
+			foreach (var pin in xMap.pins)
+				pin.PropertyChanged += Pin_PropertyChanged;
+
+			// Add the mapLocked pins first
+			// Select all pins where it has heading setter activated
+			var mapLockedFeatureCollection = xMap.pins.Where((Pin pin) => pin.IsCenterAndFlat).toShapeSourceArray();
+
+			var mapLockedPinSource = (MGLShapeSource)nStyle.SourceWithIdentifier(mapLockedPinsSourceKey);
+			mapLockedPinSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(mapLockedFeatureCollection);
+
+			// Add the normal pins after
+			// Select all pins where it has heading disabled
+			var normalFeatureCollection = xMap.pins.Where((Pin pin) => !pin.IsCenterAndFlat).toShapeSourceArray();
+
+			var normalPinSource = (MGLShapeSource)nStyle.SourceWithIdentifier(normalPinsSourceKey);
+			normalPinSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(normalFeatureCollection);
+		}
+		#endregion
+
+		#region Post pin initialization pin operations
+		private void removeAllPins()
+		{
+			if (xMap.pins == null)
+				return;
+
+			var flatPinsSource = (MGLShapeSource)nStyle.SourceWithIdentifier(mapLockedPinsSourceKey);
+			var normalPinsSource = (MGLShapeSource)nStyle.SourceWithIdentifier(normalPinsSourceKey);
+
+			// Just set to empty pins
+			flatPinsSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(xMap.pins.toShapeSourceArray());
+			normalPinsSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(xMap.pins.toShapeSourceArray());
+
+			// Usubscribe each pin to change monitoring
+			foreach (var pin in xMap.pins) {
+				pin.PropertyChanged -= Pin_PropertyChanged;
+			}
+		}
+
+		private void addPin(Pin pin)
+		{
+			// Search for the existing image first
+			// The image is the type/class key
+			var key = pin.image;
+			// Find a source that has the same image as this pin
+			var uiImage = nStyle.ImageForName(key);
+			// Get all pins with the same flat value
+			var pinsWithSimilarKey = xMap.pins.Where((Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat);
+
+			// If there are existing image of the same type the reuse
+			if (uiImage != null)
+				updatePins(pin);
+			else {
+				// Otherwise add new
+
+				//New image
+				using (var stream = pin.image.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.width, pin.height)) {
+					using (var imageData = NSData.FromStream(stream)) {
+						var newUIImage = UIImage.LoadFromData(imageData);
+						nStyle.SetImage(newUIImage, key);
+					}
+				}
+
+				updatePins(pin);
+			}
+		}
+
+		private void updatePins(Pin pin)
+		{
+			// The image is the type/class key
+			var key = pin.image;
+			// Find a source that has the same image as this pin
+			var uiImage = nStyle.ImageForName(key);
+			// Get all pins with the same flat value
+			var pinsWithSimilarKey = xMap.pins.Where((Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat);
+
+			// If there are existing image of the same type the reuse
+			if (uiImage != null) {
+				MGLShapeSource geoJsonSource;
+
+				// Edit the proper source
+				if (pin.IsCenterAndFlat)
+					geoJsonSource = (MGLShapeSource)nStyle.SourceWithIdentifier(mapLockedPinsSourceKey);
+				else
+					geoJsonSource = (MGLShapeSource)nStyle.SourceWithIdentifier(normalPinsSourceKey);
+
+				// Refresh entire source when a pin is added to a specific source
+				geoJsonSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(pinsWithSimilarKey.toShapeSourceArray());
+			}
+		}
+
+		private void animateLocationChange(Pin pin)
+		{
+			// Only animate flat pins
+			if (!pin.IsCenterAndFlat)
+				return;
+
+			// The image is the type/class key
+			var key = pin.image;
+			// Find a source that has the same image as this pin
+			var bitmap = nStyle.ImageForName(key);
+			// Get all pins with the same key and same flat value
+			var pinsWithSimilarKeyAndNotThisPin = xMap.pins.Where(
+				(Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat && arg != pin).toFeatureList();
+			var geoJsonSource = (MGLShapeSource)nStyle.SourceWithIdentifier(mapLockedPinsSourceKey);
+
+			pin.previousPinPosition.animatePin(
+				pin.position,
+				new Command<double>((d) => {
+					var feature = new MGLPointFeature {
+						Coordinate = new CLLocationCoordinate2D(pin.position.latitude * d,
+																pin.position.longitude * d)
+					};
+					feature.Attributes = NSDictionary<NSString, NSObject>.FromObjectsAndKeys(
+						new object[] { 
+							pin.image,
+							pin.heading,
+							pin.imageScaleFactor
+						},
+						new object[] {
+							MapboxRenderer.pin_image_key,
+							MapboxRenderer.pin_rotation_key,
+							MapboxRenderer.pin_size_key
+						});
+
+					// Update the feature thats need animating
+					pinsWithSimilarKeyAndNotThisPin.Add(feature);
+
+					// Update the entire layer
+					geoJsonSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(pinsWithSimilarKeyAndNotThisPin.toShapeSourceArray());
+
+					// Remove the feature so that there will be no multiple instances of it accross the animation path
+					pinsWithSimilarKeyAndNotThisPin.Remove(feature);
+				}));
+		}
+		#endregion
+
+		#region Change detectors
+		void Map_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+		{
+			// The entire pins collection itself has been changed
+			if (e.PropertyName == nameof(Map.pins))
+				removeAllPins();
+		}
+
+		void Pins_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+		{
+			// No move and replace support yet
+			switch (e.Action) {
+				case NotifyCollectionChangedAction.Add:
+					foreach (Pin pin in e.NewItems) {
+						pin.PropertyChanged += Pin_PropertyChanged;
+						addPin(pin);
+					}
+					break;
+				case NotifyCollectionChangedAction.Remove:
+					foreach (Pin pin in e.OldItems) {
+						pin.PropertyChanged -= Pin_PropertyChanged;
+						updatePins(pin);
+					}
+					break;
+				case NotifyCollectionChangedAction.Reset:
+					removeAllPins();
+					break;
+			}
+		}
+
+		void Pin_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+		{
+			var pin = (Pin)sender;
+			if (e.PropertyName == Pin.positionProperty.PropertyName)
+				animateLocationChange(pin);
+		}
+		#endregion
 
 		private void testPolyline(MGLStyle style)
 		{

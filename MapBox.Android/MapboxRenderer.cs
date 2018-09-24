@@ -15,15 +15,16 @@ using System.Collections.Generic;
 using NView = Android.Views.View;
 using AGraphics = Android.Graphics;
 using XMapbox = MapBox;
-using MapBox.Android.Extension;
+using MapBox.Android.Extensions;
 using System.Collections.Specialized;
 using Com.Mapbox.Mapboxsdk.Style.Expressions;
 using System.Linq;
+using Com.Mapbox.Mapboxsdk.Geometry;
 
 [assembly: ExportRenderer(typeof(MapBox.Map), typeof(MapBox.Android.MapboxRenderer))]
 namespace MapBox.Android
 {
-	public partial class MapboxRenderer : ViewRenderer<Map, NView>, IOnMapReadyCallback
+	public partial class MapboxRenderer : ViewRenderer<Map, NView>, IOnMapReadyCallback, MapboxMap.IOnMapClickListener
 	{
 		public const string mapLockedPinsKey = nameof(mapLockedPinsKey);
 		public const string mapLockedPinsSourceKey = nameof(mapLockedPinsSourceKey);
@@ -34,6 +35,7 @@ namespace MapBox.Android
 		public const string pin_image_key = nameof(pin_image_key);
 		public const string pin_rotation_key = nameof(pin_rotation_key);
 		public const string pin_size_key = nameof(pin_size_key);
+		public const string pin_offset_key = nameof(pin_offset_key);
 
 		private MapViewFragment fragment;
 		private MapboxMap nMap;
@@ -101,7 +103,7 @@ namespace MapBox.Android
 			nMap = mapBox;
 			nMap.SetStyle("mapbox://styles/mapbox/streets-v9");
 			//nMap.SetStyle("mapbox://styles/mapbox/light-v9");
-
+			nMap.AddOnMapClickListener(this);
 
 			// This will make sure the map is FULLY LOADED and not just ready
 			// Because it will not load pins/polylines if the operation is executed immediately
@@ -117,9 +119,6 @@ namespace MapBox.Android
 
 				// Subscribe to changes in map bindable properties after all pins are loaded
 				xMap.PropertyChanged += Map_PropertyChanged;
-
-				// Temp accuracy marker
-				nMap.AddMarker(new MarkerOptions().SetPosition(new Com.Mapbox.Mapboxsdk.Geometry.LatLng(0, 0)));
 				return false;
 			});
 		}
@@ -147,6 +146,7 @@ namespace MapBox.Android
 			var normalPinsPropertyValues = new List<PropertyValue>{
 				PropertyFactory.IconImage("{"+pin_image_key+"}"), //Tokenize the field
 				PropertyFactory.IconSize(Expression.Get(pin_size_key)),
+				PropertyFactory.IconOffset(Expression.Get(pin_offset_key)), //https://www.mapbox.com/mapbox-gl-js/style-spec/#layout-symbol-icon-offset
 				PropertyFactory.IconAnchor("bottom"), // https://www.mapbox.com/mapbox-gl-js/style-spec/#layout-symbol-icon-anchor = "bottom" or "center"
 				PropertyFactory.IconAllowOverlap(Java.Lang.Boolean.True) // Always overlap
 			};
@@ -223,21 +223,12 @@ namespace MapBox.Android
 			var key = pin.image;
 			// Find a source that has the same image as this pin
 			var bitmap = nMap.GetImage(key);
-			// Get all pins with the same flat value
-			var pinsWithSimilarKey = xMap.pins.Where((Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat);
 
 			// If there are existing image of the same type the reuse
-			if (bitmap != null) {
-				GeoJsonSource geoJsonSource;
-				// Edit the proper source
-				if (pin.IsCenterAndFlat)
-					geoJsonSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
-				else
-					geoJsonSource = (GeoJsonSource)nMap.GetSource(normalPinsSourceKey);
-
-				// Refresh entire source when a pin is added to a specific source
-				geoJsonSource.SetGeoJson(pinsWithSimilarKey.toFeatureCollection());
-			} else {
+			// Note, this is just removePin(Pin), but left this way because there might be a restructure for this in the fututre
+			if (bitmap != null)
+				updatePins(pin);
+			else {
 				// Otherwise add new
 
 				// New image
@@ -246,20 +237,15 @@ namespace MapBox.Android
 					nMap.AddImage(key, newBitmap);
 				}
 
-				GeoJsonSource geoJsonSource;
-				// Edit the proper source
-				if (pin.IsCenterAndFlat)
-					geoJsonSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
-				else
-					geoJsonSource = (GeoJsonSource)nMap.GetSource(normalPinsSourceKey);
-
-				// Refresh entire source when a pin is added to a specific source
-				geoJsonSource.SetGeoJson(pinsWithSimilarKey.toFeatureCollection());
+				updatePins(pin);
 			}
-
 		}
 
-		private void removePin(Pin pin)
+		/// <summary>
+		/// This method updates the pins to the current pin count, and includes all the pin property updates
+		/// </summary>
+		/// <param name="pin">Pin.</param>
+		private void updatePins(Pin pin)
 		{
 			// The image is the type/class key
 			var key = pin.image;
@@ -278,7 +264,6 @@ namespace MapBox.Android
 				else
 					geoJsonSource = (GeoJsonSource)nMap.GetSource(normalPinsSourceKey);
 
-
 				// Refresh entire source when a pin is added to a specific source
 				geoJsonSource.SetGeoJson(pinsWithSimilarKey.toFeatureCollection());
 			}
@@ -296,7 +281,7 @@ namespace MapBox.Android
 			var bitmap = nMap.GetImage(key);
 			// Get all pins with the same key and same flat value
 			var pinsWithSimilarKeyAndNotThisPin = xMap.pins.Where(
-				(Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat && arg != pin).toFeature();
+				(Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat && arg != pin).toFeatureList();
 			var geoJsonSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
 
 			pin.previousPinPosition.animatePin(
@@ -343,7 +328,7 @@ namespace MapBox.Android
 				case NotifyCollectionChangedAction.Remove:
 					foreach (Pin pin in e.OldItems) {
 						pin.PropertyChanged -= Pin_PropertyChanged;
-						removePin(pin);
+						updatePins(pin);
 					}
 					break;
 				case NotifyCollectionChangedAction.Reset:
@@ -359,6 +344,21 @@ namespace MapBox.Android
 				animateLocationChange(pin);
 		}
 		#endregion
+
+		public void OnMapClick(LatLng point)
+		{
+			var mapLockedPinsLayer = (SymbolLayer)nMap.GetLayer(mapLockedPinsKey);
+			var normalPinsLayer = (SymbolLayer)nMap.GetLayer(normalPinsKey);
+
+			var pixel = nMap.Projection.ToScreenLocation(point);
+			var features = nMap.QueryRenderedFeatures(pixel, mapLockedPinsKey, normalPinsKey);
+
+			System.Diagnostics.Debug.WriteLine($"Features: {features}");
+
+			// TODO: Return the pin clicked
+			if (features.Count > 0 && xMap.pinClickedCommand != null)
+				xMap.pinClickedCommand.Execute(null);
+		}
 
 		private void testPolyLine()
 		{

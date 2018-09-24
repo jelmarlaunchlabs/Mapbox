@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
 using Xamarin.Forms;
 
 [assembly: InternalsVisibleTo("MapBox.Android"), InternalsVisibleTo("Mapbox.iOS")]
@@ -16,7 +17,7 @@ namespace MapBox
 			typeof(ObservableCollection<Pin>),
 			typeof(Map),
 			default(ObservableCollection<Pin>),
-			BindingMode.TwoWay,
+			BindingMode.OneWay,
 			propertyChanged: (bindable, p1, p2) => {
 				var view = bindable as Map;
 				var newValue = (ObservableCollection<Pin>)p2;
@@ -27,6 +28,21 @@ namespace MapBox
 			set { SetValue(pinsProperty, value); }
 		}
 
+		public static readonly BindableProperty pinClickedCommandProperty = BindableProperty.Create(
+			nameof(pinClickedCommand),
+			typeof(ICommand),
+			typeof(Map),
+			default(ICommand),
+			BindingMode.OneWay,
+			propertyChanged: (bindable, p1, p2) => {
+				var view = bindable as Map;
+				var newValue = (ICommand)p2;
+			}
+		);
+		public ICommand pinClickedCommand {
+			get { return (ICommand)GetValue(pinClickedCommandProperty); }
+			set { SetValue(pinClickedCommandProperty, value); }
+		}
 		public Map()
 		{
 			callerAssembly = Assembly.GetCallingAssembly();
