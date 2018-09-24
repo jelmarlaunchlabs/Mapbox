@@ -17,16 +17,23 @@ using AGraphics = Android.Graphics;
 using XMapbox = MapBox;
 using MapBox.Android.Extension;
 using System.Collections.Specialized;
+using Com.Mapbox.Mapboxsdk.Style.Expressions;
+using System.Linq;
 
-[assembly:ExportRenderer(typeof(MapBox.Map),typeof(MapBox.Android.MapboxRenderer))]
+[assembly: ExportRenderer(typeof(MapBox.Map), typeof(MapBox.Android.MapboxRenderer))]
 namespace MapBox.Android
 {
 	public partial class MapboxRenderer : ViewRenderer<Map, NView>, IOnMapReadyCallback
 	{
+		public const string mapLockedPinsKey = nameof(mapLockedPinsKey);
+		public const string mapLockedPinsSourceKey = nameof(mapLockedPinsSourceKey);
+
+		public const string normalPinsKey = nameof(normalPinsKey);
+		public const string normalPinsSourceKey = nameof(normalPinsSourceKey);
+
 		public const string pin_image_key = nameof(pin_image_key);
-		public const string pin_rotation_method_key = nameof(pin_rotation_method_key);
 		public const string pin_rotation_key = nameof(pin_rotation_key);
-		public const string pin_anchor_key = nameof(pin_anchor_key);
+		public const string pin_size_key = nameof(pin_size_key);
 
 		private MapViewFragment fragment;
 		private MapboxMap nMap;
@@ -98,12 +105,11 @@ namespace MapBox.Android
 
 			// This will make sure the map is FULLY LOADED and not just ready
 			// Because it will not load pins/polylines if the operation is executed immediately
-			Device.StartTimer(TimeSpan.FromMilliseconds(50), () => {
+			Device.StartTimer(TimeSpan.FromMilliseconds(100), () => {
 				// Add all pin first
 				initializePinsLayer();
 				addAllReusablePinImages();
 				addAllPins();
-				//testMarker();
 
 				// Then subscribe to pins added
 				if (xMap.pins != null)
@@ -118,22 +124,35 @@ namespace MapBox.Android
 			});
 		}
 
+		#region Pin initializers
+		/// <summary>
+		/// NOTE: According to documentation, as of the moment, the icon-rotation-alignment does not support data-driven-styling yet
+		/// https://www.mapbox.com/mapbox-gl-js/style-spec/#layout-symbol-icon-rotation-alignment
+		/// </summary>
 		private void initializePinsLayer()
 		{
-			// New layer - configure elements
-			var propertyValues = new List<PropertyValue>{
+			// Pins with bearings layer - configure elements
+			var mapLockedPinsPropertyValues = new List<PropertyValue>{
 				PropertyFactory.IconImage("{"+pin_image_key+"}"), //Tokenize the field
-				PropertyFactory.IconRotationAlignment("pin_rotation_method_key"), // Finally the map-lock flat = "map"
-				PropertyFactory.IconRotate(new Com.Mapbox.Mapboxsdk.Style.Expressions.Expression("{"+pin_rotation_key+"}")), // Programatic heading
+				PropertyFactory.IconRotate(Expression.Get(pin_rotation_key)),
+				PropertyFactory.IconSize(Expression.Get(pin_size_key)),
+				PropertyFactory.IconRotationAlignment("map"), // Finally the map-lock flat = "map"
+				PropertyFactory.IconAllowOverlap(Java.Lang.Boolean.True) // Always overlap
+			};
+			var mapLockedPinsLayer = new SymbolLayer(mapLockedPinsKey, mapLockedPinsSourceKey)
+				.WithProperties(mapLockedPinsPropertyValues.ToArray());
+			nMap.AddLayer(mapLockedPinsLayer);
+
+			// Normal pins layer - configure elements
+			var normalPinsPropertyValues = new List<PropertyValue>{
+				PropertyFactory.IconImage("{"+pin_image_key+"}"), //Tokenize the field
+				PropertyFactory.IconSize(Expression.Get(pin_size_key)),
 				PropertyFactory.IconAnchor("bottom"), // https://www.mapbox.com/mapbox-gl-js/style-spec/#layout-symbol-icon-anchor = "bottom" or "center"
 				PropertyFactory.IconAllowOverlap(Java.Lang.Boolean.True) // Always overlap
 			};
-
-			//Com.Mapbox.Mapboxsdk.Style.Expressions.Expression.SwitchCase()
-
-			var layer = new SymbolLayer("pinsLayer", "pinsSource")
-				.WithProperties(propertyValues.ToArray());
-			nMap.AddLayer(layer);
+			var normalPinsLayer = new SymbolLayer(normalPinsKey, normalPinsSourceKey)
+				.WithProperties(normalPinsPropertyValues.ToArray());
+			nMap.AddLayer(normalPinsLayer);
 		}
 
 		private void addAllReusablePinImages()
@@ -141,8 +160,9 @@ namespace MapBox.Android
 			foreach (var pin in xMap.pins) {
 				var bitmap = nMap.GetImage(pin.image);
 
+				// If any existing item does not yet exist
 				if (bitmap == null) {
-					// New image
+					// Then add new image
 					using (var stream = pin.image.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.width, pin.height)) {
 						var newBitmap = BitmapFactory.DecodeStream(stream);
 						nMap.AddImage(pin.image, newBitmap);
@@ -151,40 +171,162 @@ namespace MapBox.Android
 			}
 		}
 
+		// Initial batch uodate
 		private void addAllPins()
 		{
 			if (xMap.pins == null)
 				return;
 
-			// Initial batch update
-			var geoJsonSource = new GeoJsonSource("pinsSource", xMap.pins.toFeatureCollection());
-			nMap.AddSource(geoJsonSource);
-		}
+			// Subscribe all pins to their respective changes
+			foreach (var pin in xMap.pins)
+				pin.PropertyChanged += Pin_PropertyChanged;
 
+			// Add the mapLocked pins first
+			// Select all pins where it has heading setter activated
+			var mapLockedFeatureCollection = xMap.pins.Where((Pin pin) => pin.IsCenterAndFlat).toFeatureCollection();
+
+			var mapLockedGeoJsonSource = new GeoJsonSource(mapLockedPinsSourceKey, mapLockedFeatureCollection);
+			nMap.AddSource(mapLockedGeoJsonSource);
+
+			// Add the normal pins after
+			// Select all pins where it has heading disabled
+			var normalFeatureCollection = xMap.pins.Where((Pin pin) => !pin.IsCenterAndFlat).toFeatureCollection();
+
+			var normalGeoJsonSource = new GeoJsonSource(normalPinsSourceKey, normalFeatureCollection);
+			nMap.AddSource(normalGeoJsonSource);
+		}
+		#endregion
+
+		#region Post pin initialization pin operations
 		private void removeAllPins()
 		{
-			//if (xMap.pins == null)
-			//	return;
+			if (xMap.pins == null)
+				return;
 
-			//// Clear all native pin stuffs
-			//foreach (var pinKey in nativePinKeyReferences) {
-			//	nMap.RemoveSource(pinKey);
-			//	nMap.RemoveImage(pinKey);
-			//	nMap.RemoveLayer(pinKey);
-			//}
+			var flatPinsSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
+			var normalPinsSource = (GeoJsonSource)nMap.GetSource(normalPinsSourceKey);
 
-			//// Reset the saved pin key references of all types
-			//nativePinKeyReferences.Clear();
+			// Just set to empty pins
+			flatPinsSource.SetGeoJson(xMap.pins.toFeatureCollection());
+			normalPinsSource.SetGeoJson(xMap.pins.toFeatureCollection());
+
+			// Usubscribe each pin to change monitoring
+			foreach (var pin in xMap.pins) {
+				pin.PropertyChanged -= Pin_PropertyChanged;
+			}
 		}
 
+		private void addPin(Pin pin)
+		{
+			// Search for the existing image first
+			// The image is the type/class key
+			var key = pin.image;
+			// Find a source that has the same image as this pin
+			var bitmap = nMap.GetImage(key);
+			// Get all pins with the same flat value
+			var pinsWithSimilarKey = xMap.pins.Where((Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat);
+
+			// If there are existing image of the same type the reuse
+			if (bitmap != null) {
+				GeoJsonSource geoJsonSource;
+				// Edit the proper source
+				if (pin.IsCenterAndFlat)
+					geoJsonSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
+				else
+					geoJsonSource = (GeoJsonSource)nMap.GetSource(normalPinsSourceKey);
+
+				// Refresh entire source when a pin is added to a specific source
+				geoJsonSource.SetGeoJson(pinsWithSimilarKey.toFeatureCollection());
+			} else {
+				// Otherwise add new
+
+				// New image
+				using (var stream = key.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.width, pin.height)) {
+					var newBitmap = BitmapFactory.DecodeStream(stream);
+					nMap.AddImage(key, newBitmap);
+				}
+
+				GeoJsonSource geoJsonSource;
+				// Edit the proper source
+				if (pin.IsCenterAndFlat)
+					geoJsonSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
+				else
+					geoJsonSource = (GeoJsonSource)nMap.GetSource(normalPinsSourceKey);
+
+				// Refresh entire source when a pin is added to a specific source
+				geoJsonSource.SetGeoJson(pinsWithSimilarKey.toFeatureCollection());
+			}
+
+		}
+
+		private void removePin(Pin pin)
+		{
+			// The image is the type/class key
+			var key = pin.image;
+			// Find a source that has the same image as this pin
+			var bitmap = nMap.GetImage(key);
+			// Get all pins with the same key and same flat value
+			var pinsWithSimilarKey = xMap.pins.Where((Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat);
+
+			// Use the existing values in map
+			if (bitmap != null) {
+				GeoJsonSource geoJsonSource;
+
+				// Edit the proper source
+				if (pin.IsCenterAndFlat)
+					geoJsonSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
+				else
+					geoJsonSource = (GeoJsonSource)nMap.GetSource(normalPinsSourceKey);
+
+
+				// Refresh entire source when a pin is added to a specific source
+				geoJsonSource.SetGeoJson(pinsWithSimilarKey.toFeatureCollection());
+			}
+		}
+
+		private void animateLocationChange(Pin pin)
+		{
+			// Only animate flat pins
+			if (!pin.IsCenterAndFlat)
+				return;
+
+			// The image is the type/class key
+			var key = pin.image;
+			// Find a source that has the same image as this pin
+			var bitmap = nMap.GetImage(key);
+			// Get all pins with the same key and same flat value
+			var pinsWithSimilarKeyAndNotThisPin = xMap.pins.Where(
+				(Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat && arg != pin).toFeature();
+			var geoJsonSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
+
+			pin.previousPinPosition.animatePin(
+				pin.position,
+				new Xamarin.Forms.Command<double>((d) => {
+					var feature = Feature.FromGeometry(
+						Com.Mapbox.Geojson.Point.FromLngLat(pin.position.longitude * d,
+															pin.position.latitude * d));
+					feature.AddStringProperty(MapboxRenderer.pin_image_key, pin.image);
+					feature.AddNumberProperty(MapboxRenderer.pin_rotation_key, (Java.Lang.Number)pin.heading);
+					feature.AddNumberProperty(MapboxRenderer.pin_size_key, (Java.Lang.Number)pin.imageScaleFactor);
+
+					// Update the feature thats need animating
+					pinsWithSimilarKeyAndNotThisPin.Add(feature);
+
+					// Update the entire layer
+					geoJsonSource.SetGeoJson(pinsWithSimilarKeyAndNotThisPin.toFeatureCollection());
+
+					// Remove the feature so that there will be no multiple instances of it accross the animation path
+					pinsWithSimilarKeyAndNotThisPin.Remove(feature);
+				}));
+		}
+		#endregion
+
+		#region Change detectors
 		void Map_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
 		{
 			if (e.PropertyName == nameof(XMapbox.Map.pins)) {
 				// The entire pins collection itself has been changed
-				// Remove all pins first for this map instance
 				removeAllPins();
-				// Then add all of the pins from the new collection
-				addAllPins();
 			}
 		}
 
@@ -193,12 +335,16 @@ namespace MapBox.Android
 			// No move and replace support yet
 			switch (e.Action) {
 				case NotifyCollectionChangedAction.Add:
-					foreach (Pin pin in e.NewItems)
+					foreach (Pin pin in e.NewItems) {
+						pin.PropertyChanged += Pin_PropertyChanged;
 						addPin(pin);
+					}
 					break;
 				case NotifyCollectionChangedAction.Remove:
-					foreach (Pin pin in e.OldItems)
+					foreach (Pin pin in e.OldItems) {
+						pin.PropertyChanged -= Pin_PropertyChanged;
 						removePin(pin);
+					}
 					break;
 				case NotifyCollectionChangedAction.Reset:
 					removeAllPins();
@@ -206,131 +352,13 @@ namespace MapBox.Android
 			}
 		}
 
-		private void testMarker()
+		void Pin_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
 		{
-			#region MyRegion
-			//Device.StartTimer(TimeSpan.FromSeconds(5), () => {
-			//	// Set the features
-			//	var features = new List<Feature>{
-			//		Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(0,0)),
-			//		Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(1,1)),
-			//		Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(2,2)),
-			//		Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(3,3)),
-			//		Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(4,4)),
-			//		Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(5,5)),
-			//	};
-			//	var featureCollection = FeatureCollection.FromFeatures(features.ToArray());
-
-			//	// Set the geoJsonSource
-			//	var geoJsonSource = new GeoJsonSource("marker-source", featureCollection);
-			//	nMap.AddSource(geoJsonSource);
-
-			//	// Init actual image
-			//	using (var stream = "car.png".getRawStremFromEmbeddedResource(xMap.callerAssembly, 50, 50)) {
-			//		var bitmap = BitmapFactory.DecodeStream(stream);
-			//		nMap.AddImage("my-marker-image", bitmap);
-			//	}
-
-			//	// Set the layer
-			//	var markers = new SymbolLayer("marker-layer", "marker-source")
-			//		.WithProperties(PropertyFactory.IconImage("my-marker-image"),
-			//						PropertyFactory.IconRotationAlignment("map"), // Finally the map-lock flat
-			//						PropertyFactory.IconRotate(new Java.Lang.Float(90f)), // Programatic heading
-			//						PropertyFactory.IconAllowOverlap(Java.Lang.Boolean.True));
-			//	nMap.AddLayer(markers);
-
-			//	// Update new location
-			//	Device.StartTimer(TimeSpan.FromSeconds(5), () => {
-			//		// Update location of the pin
-
-			//		// Set the features
-			//		var features2 = new List<Feature>{
-			//			Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(10,10)),
-			//			Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(11,11)),
-			//			Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(12,12)),
-			//			Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(13,13)),
-			//			Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(14,14)),
-			//			Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(15,15)),
-			//		};
-			//		var featureCollection2 = FeatureCollection.FromFeatures(features2.ToArray());
-			//		geoJsonSource.SetGeoJson(featureCollection2);
-			//		return false;
-			//	});
-			//	return false;
-			//});
-			#endregion
-
-			Device.StartTimer(TimeSpan.FromSeconds(5), () => {
-				// Init actual image
-				using (var stream = "Resources.car.png".getRawStremFromEmbeddedResource(xMap.callerAssembly, 50, 50)) {
-					var bitmap = BitmapFactory.DecodeStream(stream);
-					nMap.AddImage("image", bitmap);
-				}
-
-				using (var stream = "Resources.carBlack.jpg".getRawStremFromEmbeddedResource(xMap.callerAssembly, 50, 50)) {
-					var bitmap = BitmapFactory.DecodeStream(stream);
-					nMap.AddImage("image2", bitmap);
-				}
-
-				// Set the layer
-				var markers = new SymbolLayer("marker-layer", "marker-source")
-					.WithProperties(PropertyFactory.IconImage("{type}"),
-									PropertyFactory.IconRotationAlignment("map"), // Finally the map-lock flat
-									PropertyFactory.IconRotate(new Java.Lang.Float(90f)), // Programatic heading
-									PropertyFactory.IconAllowOverlap(Java.Lang.Boolean.True));
-				nMap.AddLayer(markers);
-
-				// Set the features
-				var features = new List<Feature>{
-					Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(0,0)),
-					Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(1,1)),
-					Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(2,2)),
-					Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(3,3)),
-					Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(4,4)),
-					Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(5,5)),
-				};
-
-				features[0].AddStringProperty("type", "image");
-				features[1].AddStringProperty("type", "image2");
-				features[2].AddStringProperty("type", "image");
-				features[3].AddStringProperty("type", "image2");
-				features[4].AddStringProperty("type", "image");
-				features[5].AddStringProperty("type", "image2");
-
-				var featureCollection = FeatureCollection.FromFeatures(features.ToArray());
-
-				// Set the geoJsonSource
-				var geoJsonSource = new GeoJsonSource("marker-source", featureCollection);
-				nMap.AddSource(geoJsonSource);
-
-				// Update new location
-				Device.StartTimer(TimeSpan.FromSeconds(5), () => {
-					// Update location of the pin
-
-					// Set the features
-					var features2 = new List<Feature>{
-						Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(10,10)),
-						Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(11,11)),
-						Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(12,12)),
-						Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(13,13)),
-						Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(14,14)),
-						Feature.FromGeometry(Com.Mapbox.Geojson.Point.FromLngLat(15,15)),
-					};
-
-					features2[0].AddStringProperty("type", "image");
-					features2[1].AddStringProperty("type", "image2");
-					features2[2].AddStringProperty("type", "image");
-					features2[3].AddStringProperty("type", "image2");
-					features2[4].AddStringProperty("type", "image");
-					features2[5].AddStringProperty("type", "image2");
-
-					var featureCollection2 = FeatureCollection.FromFeatures(features2.ToArray());
-					geoJsonSource.SetGeoJson(featureCollection2);
-					return false;
-				});
-				return false;
-			});
+			var pin = (Pin)sender;
+			if (e.PropertyName == Pin.positionProperty.PropertyName)
+				animateLocationChange(pin);
 		}
+		#endregion
 
 		private void testPolyLine()
 		{
@@ -348,8 +376,8 @@ namespace MapBox.Android
 				var lineString = LineString.FromLngLats(routeCoordinates);
 
 				var featureCollection = FeatureCollection.FromFeatures(
-					new Feature[] { 
-						Feature.FromGeometry(lineString) 
+					new Feature[] {
+						Feature.FromGeometry(lineString)
 					});
 
 				var geoJsonSource = new GeoJsonSource("line-source", featureCollection);

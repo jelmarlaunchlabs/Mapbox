@@ -6,29 +6,6 @@ namespace MapBox
 {
 	public class Pin : BindableObject
 	{
-		// ID
-		// Image (embeded resource or url)
-		// IsCenteredAndFlat
-		// Heading
-		// Width
-		// Height
-
-		public static readonly BindableProperty idProperty = BindableProperty.Create(
-			nameof(id),
-			typeof(int),
-			typeof(Pin),
-			default(int),
-			BindingMode.TwoWay,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Pin;
-				var newValue = (int)p2;
-			}
-		);
-		public int id {
-			get { return (int)GetValue(idProperty); }
-			set { SetValue(idProperty, value); }
-		}
-
 		public static readonly BindableProperty imageProperty = BindableProperty.Create(
 			nameof(image),
 			typeof(string),
@@ -93,9 +70,8 @@ namespace MapBox
 				var newValue = (double)p2;
 			}
 		);
-
 		/// <summary>
-		/// Note, for now, the width will be decided on the width of the first added pin of a certain image
+		/// Note this is the base image width, the final width will be decided by setting the factor
 		/// </summary>
 		/// <value>The width.</value>
 		public double width {
@@ -114,14 +90,33 @@ namespace MapBox
 				var newValue = (double)p2;
 			}
 		);
-
 		/// <summary>
-		/// Note, for now, the height will be decided on the height of the first added pin of a certain image
+		/// Note this is the base image height, the final height will be decided by setting the factor
 		/// </summary>
-		/// <value>The width.</value>
+		/// <value>The height.</value>
 		public double height {
 			get { return (double)GetValue(heightProperty); }
 			set { SetValue(heightProperty, value); }
+		}
+
+		public static readonly BindableProperty imageScaleFactorProperty = BindableProperty.Create(
+			nameof(imageScaleFactor),
+			typeof(double),
+			typeof(Pin),
+			(double)1,
+			BindingMode.TwoWay,
+			propertyChanged: (bindable, p1, p2) => {
+				var view = bindable as Pin;
+				var newValue = (double)p2;
+			}
+		);
+		/// <summary>
+		/// This is the scaling factor, the number in this will decide the final size of the image PER pin.
+		/// </summary>
+		/// <value>The image scale factor.</value>
+		public double imageScaleFactor {
+			get { return (double)GetValue(imageScaleFactorProperty); }
+			set { SetValue(imageScaleFactorProperty, value); }
 		}
 
 		public static readonly BindableProperty positionProperty = BindableProperty.Create(
@@ -132,13 +127,16 @@ namespace MapBox
 			BindingMode.TwoWay,
 			propertyChanged: (bindable, p1, p2) => {
 				var view = bindable as Pin;
+				view.previousPinPosition = (Position)p1;
 				var newValue = (Position)p2;
+
 			}
 		);
 		public Position position {
 			get { return (Position)GetValue(positionProperty); }
 			set { SetValue(positionProperty, value); }
 		}
+		public Position previousPinPosition { get; set; }
 
 		public Pin()
 		{

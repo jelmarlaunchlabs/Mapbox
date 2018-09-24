@@ -14,7 +14,10 @@ namespace MapboxTester
     {
         public MainPage()
         {
-            InitializeComponent();
+			//"Resources.car.png
+			//Resources.carBlack.jpg
+
+			InitializeComponent();
 			// Initialize pins
 			map.pins = new ObservableCollection<Pin>{
 				new Pin{
@@ -24,7 +27,7 @@ namespace MapboxTester
 					position = new Position(0,0)
 				},
 				new Pin{
-					image = "Resources.carBlack.jpg",
+					image = "Resources.car.png",
 					IsCenterAndFlat = true,
 					heading = 180,
 					position = new Position(1,1),
@@ -32,7 +35,7 @@ namespace MapboxTester
 					height = 90
 				},
 				new Pin{
-					image = "Resources.carBlack.jpg",
+					image = "Resources.car.png",
 					IsCenterAndFlat = true,
 					heading = 270,
 					position = new Position(2,2),
@@ -47,35 +50,36 @@ namespace MapboxTester
 				}
 			};
 
-			//// Add pin
-			//Device.StartTimer(TimeSpan.FromSeconds(5), () => {
-			//	map.pins.Add(
-			//		new Pin {
-			//			image = "Resources.car.png",
-			//			IsCenterAndFlat = true,
-			//			heading = 90,
-			//			position = new Position(4, 4)
-			//		});
+			// Add pin
+			Device.StartTimer(TimeSpan.FromSeconds(10), () => {
+				map.pins.Add(
+					new Pin {
+						image = "Resources.carBlack.jpg",
+						IsCenterAndFlat = true,
+						heading = 90,
+						position = new Position(4, 4)
+					});
 
-			//	// Remove pin
-			//	Device.StartTimer(TimeSpan.FromSeconds(10), () => {
-			//		map.pins.Remove(map.pins[2]);
+				// Remove pin
+				Device.StartTimer(TimeSpan.FromSeconds(10), () => {
+					map.pins.Remove(map.pins[2]);
 
-			//		// Clear pins
-			//		Device.StartTimer(TimeSpan.FromSeconds(10), () => {
-			//			map.pins.Clear();
+					// Clear pins
+					//Device.StartTimer(TimeSpan.FromSeconds(10), () => {
+					//map.pins.Clear();
 
-			//			// Change location of certain pin
-			//			Device.StartTimer(TimeSpan.FromSeconds(10), () => {
-			//				map.pins[0].position = new Position(-5, -5);
-			//				return false;
-			//			});
-			//			return false;
-			//		});
-			//		return false;
-			//	});
-			//	return false;
-			//});
+					// Change location of certain pin
+					Device.StartTimer(TimeSpan.FromSeconds(10), () => {
+						map.pins[1].position = new Position(-5, -5);
+						map.pins[1].heading = 225;
+						return false;
+					});
+					//	return false;
+					//});
+					return false;
+				});
+				return false;
+			});
         }
     }
 }
