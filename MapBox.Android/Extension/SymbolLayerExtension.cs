@@ -10,7 +10,7 @@ namespace MapBox.Android.Extensions
 	{
 		public static FeatureCollection toFeatureCollection(this IEnumerable<Pin> pins)
 		{
-			return FeatureCollection.FromFeatures(pins.toFeatureList().ToArray());
+			return pins.toFeatureList().toFeatureCollection();
 		}
 
 		public static List<Feature> toFeatureList(this IEnumerable<Pin> pins)
@@ -37,6 +37,34 @@ namespace MapBox.Android.Extensions
 		public static FeatureCollection toFeatureCollection(this IEnumerable<Feature> features)
 		{
 			return FeatureCollection.FromFeatures(features.ToArray());
+		}
+
+		public static List<Feature> toFeatureList(this IEnumerable<Route> routes)
+		{
+			var features = new List<Feature>();
+
+			foreach (var route in routes) {
+				var list = route.points.Select((Models.Position arg) => {
+					return Point.FromLngLat(arg.longitude, arg.latitude);
+				}).ToList();
+
+				var lineString = LineString.FromLngLats(list);
+
+				var feature = Feature.FromGeometry(lineString);
+				feature.AddStringProperty(MapboxRenderer.border_line_color_key, route.borderLineColor);
+				feature.AddStringProperty(MapboxRenderer.line_color_key, route.lineColor);
+				feature.AddNumberProperty(MapboxRenderer.border_line_width_key, (Java.Lang.Number)route.borderLineWidth);
+				feature.AddNumberProperty(MapboxRenderer.line_width_key, (Java.Lang.Number)route.lineWidth);
+
+				features.Add(feature);
+			}
+
+			return features;
+		}
+
+		public static FeatureCollection toFeatureCollection(this IEnumerable<Route> routes)
+		{
+			return routes.toFeatureList().toFeatureCollection();
 		}
 	}
 }

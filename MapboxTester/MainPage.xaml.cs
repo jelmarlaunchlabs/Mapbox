@@ -48,6 +48,49 @@ namespace MapboxTester
 				}
 			};
 
+			map.routes = new ObservableCollection<Route> {
+				new Route {
+					points = {
+						new Position(0,0),
+						new Position(1,1),
+						new Position(2,2)
+					},
+					lineWidth=4,
+					borderLineWidth=8,
+					lineColor= "#ff0000",
+					borderLineColor = "#00FF00",
+				},
+				new Route {
+					points = {
+						new Position(0,0),
+						new Position(1,-1),
+						new Position(2,-2)
+					},
+					lineWidth=4,
+					borderLineWidth=8,
+					lineColor= "#ff00f0",
+					borderLineColor = "#0f0F00",
+				},
+				new Route {
+					points = {
+						new Position(0,0),
+						new Position(-1,1),
+						new Position(-2,2)
+					},
+					lineWidth=4,
+					borderLineWidth=8,
+					lineColor= "#ff00f0",
+					borderLineColor = "#0f0F00",
+				},
+				new Route {
+					points = {
+						new Position(0,0),
+						new Position(-1,-1),
+						new Position(-2,-2),
+					}
+				},
+			};
+
 			// Add pin
 			Device.StartTimer(TimeSpan.FromSeconds(10), () => {
 				map.pins.Add(
@@ -58,22 +101,65 @@ namespace MapboxTester
 						position = new Position(4, 4)
 					});
 
+				map.routes.Add(
+					new Route {
+						points = {
+							new Position(-3,-3),
+							new Position(-4,-4),
+							new Position(-5,-5),
+						},
+						lineWidth = 5,
+						borderLineWidth = 10,
+						lineColor = "#0000FF",
+						borderLineColor = "#0FF00F"
+					});
+
 				// Remove pin
 				Device.StartTimer(TimeSpan.FromSeconds(10), () => {
 					map.pins.Remove(map.pins[2]);
+					map.routes.Remove(map.routes[2]);
 
-					//// Clear pins
-					//Device.StartTimer(TimeSpan.FromSeconds(10), () => {
-					//map.pins.Clear();
-
-					// Change location of certain pin
+					// Clear pins
 					Device.StartTimer(TimeSpan.FromSeconds(10), () => {
-						map.pins[1].position = new Position(-5, -5);
-						map.pins[1].heading = 225;
+						map.pins.Clear();
+						map.routes.Clear();
+
+						Device.StartTimer(TimeSpan.FromSeconds(5), () => {
+							map.pins = new ObservableCollection<Pin>{
+								new Pin{
+									image = "Resources.car.png",
+									IsCenterAndFlat = true,
+									heading = 180,
+									position = new Position(1,1),
+									width = 90,
+									height = 90
+								}
+							};
+							map.routes = new ObservableCollection<Route> {
+								new Route {
+									points = {
+										new Position(0,0),
+										new Position(1,1),
+										new Position(2,2)
+									},
+									lineWidth=4,
+									borderLineWidth=8,
+									lineColor= "#ff0000",
+									borderLineColor = "#00FF00",
+								}
+							};
+
+							return false;
+						});
+
+						//// Change location of certain pin
+						//Device.StartTimer(TimeSpan.FromSeconds(10), () => {
+						//	map.pins[1].position = new Position(-5, -5);
+						//	map.pins[1].heading = 225;
+						//	return false;
+						//});
 						return false;
 					});
-					//	return false;
-					//});
 					return false;
 				});
 				return false;

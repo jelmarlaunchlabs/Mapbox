@@ -11,12 +11,14 @@ using MapBox.Extensions;
 using System.Linq;
 using System.Collections.Specialized;
 using Mapbox.iOS.Extensions;
+using System.ComponentModel;
 
 [assembly: ExportRenderer(typeof(MapBox.Map), typeof(Mapbox.iOS.MapboxRenderer))]
 namespace Mapbox.iOS
 {
     public class MapboxRenderer : ViewRenderer<Map, MGLMapView>, IMGLMapViewDelegate, IUIGestureRecognizerDelegate
 	{
+		#region Pin constants
 		public const string mapLockedPinsKey = nameof(mapLockedPinsKey);
 		public const string mapLockedPinsSourceKey = nameof(mapLockedPinsSourceKey);
 
@@ -27,6 +29,21 @@ namespace Mapbox.iOS
 		public const string pin_rotation_key = nameof(pin_rotation_key);
 		public const string pin_size_key = nameof(pin_size_key);
 		public const string pin_offset_key = nameof(pin_offset_key);
+		#endregion
+
+		#region Route constants
+		// The univesal source of all polylines
+		public const string line_source_key = nameof(line_source_key);
+
+		public const string border_line_color_key = nameof(border_line_color_key);
+		public const string border_line_width_key = nameof(border_line_width_key);
+
+		public const string line_color_key = nameof(line_color_key);
+		public const string line_width_key = nameof(line_width_key);
+
+		public const string border_line_layer_key = nameof(border_line_layer_key);
+		public const string line_layer_key = nameof(line_layer_key);
+		#endregion
 
 		private Map xMap;
 		private MGLMapView nMap;
@@ -53,8 +70,13 @@ namespace Mapbox.iOS
 				if (map.pins != null)
 					map.pins.CollectionChanged -= Pins_CollectionChanged;
 
-				//Then remove all pins
+				// Unsubscribe to changes in the collection first
+				if (map.routes != null)
+					map.routes.CollectionChanged -= Routes_CollectionChanged;
+
 				removeAllPins();
+
+				removeAllRoutes();
 
 				// Unubscribe to changes in map bindable properties
 				map.PropertyChanged -= Map_PropertyChanged;
@@ -88,18 +110,18 @@ namespace Mapbox.iOS
 			addAllReusablePinImages();
 			addAllPins();
 
+			initializeRoutesLayer();
+			addAllRoutes();
+
 			// Then subscribe to pins added
 			if (xMap.pins != null)
 				xMap.pins.CollectionChanged += Pins_CollectionChanged;
 
+			if (xMap.routes != null)
+				xMap.routes.CollectionChanged += Routes_CollectionChanged;
+
 			// Subscribe to changes in map bindable properties after all pins are loaded
 			xMap.PropertyChanged += Map_PropertyChanged;
-
-			// Temp calibrator marker
-			nMap.AddAnnotation(
-				new MGLPointAnnotation {
-					Coordinate = new CLLocationCoordinate2D(0, 0)
-				});
 		}
 
 		private void setupGestureRecognizer()
@@ -122,6 +144,103 @@ namespace Mapbox.iOS
 				}
 			});
 		}
+
+		#region Route initializers
+		private void initializeRoutesLayer()
+		{
+			// Just initialize with empty so that it's guaranteed that there are sources initiated
+			// when the routes collection is still null
+			var routeSource = new MGLShapeSource(line_source_key, new NSObject[] { }, null);
+			nStyle.AddSource(routeSource);
+
+			var borderLinesLayer = new MGLLineStyleLayer(border_line_layer_key, routeSource);
+			borderLinesLayer.LineColor = NSExpression.FromKeyPath(border_line_color_key);
+			borderLinesLayer.LineWidth = NSExpression.FromKeyPath(border_line_width_key);
+			borderLinesLayer.LineJoin = NSExpression.FromConstant(NSObject.FromObject("round"));
+			borderLinesLayer.LineCap = NSExpression.FromConstant(NSObject.FromObject("round"));
+			nStyle.AddLayer(borderLinesLayer);
+
+			var linesLayer = new MGLLineStyleLayer(line_layer_key, routeSource);
+			linesLayer.LineColor = NSExpression.FromKeyPath(line_color_key);
+			linesLayer.LineWidth = NSExpression.FromKeyPath(line_width_key);
+			linesLayer.LineJoin = NSExpression.FromConstant(NSObject.FromObject("round"));
+			linesLayer.LineCap = NSExpression.FromConstant(NSObject.FromObject("round"));
+			nStyle.AddLayer(linesLayer);
+		}
+
+		private void addAllRoutes()
+		{
+			if (xMap.routes == null)
+				return;
+
+			// Subscribe all pins to their respective changes
+			foreach (var route in xMap.routes)
+				route.PropertyChanged += Pin_PropertyChanged;
+
+			var routeSource = (MGLShapeSource)nStyle.SourceWithIdentifier(line_source_key);
+			routeSource.Shape = xMap.routes.toShapeCollectionFeature();
+		}
+		#endregion
+
+		#region Post route initialization route operations
+		private void removeAllRoutes()
+		{
+			if (xMap.routes == null)
+				return;
+
+			var routeSource = (MGLShapeSource)nStyle.SourceWithIdentifier(line_source_key);
+
+			// Just set to empy route, this will also update with the latest route and the old routes removed
+			routeSource.Shape = xMap.routes.toShapeCollectionFeature();
+
+			// Unsubscribe all routes
+			if (xMap.oldRoutes != null)
+				foreach (var route in xMap.oldRoutes)
+					route.PropertyChanged -= Route_PropertyChanged;
+
+			// Subscribe new routes
+			foreach (var route in xMap.routes)
+				route.PropertyChanged += Route_PropertyChanged;
+		}
+
+		private void updateRouteCollection()
+		{
+			if (xMap.routes == null)
+				return;
+
+			var routeSource = (MGLShapeSource)nStyle.SourceWithIdentifier(line_source_key);
+
+			// Update the route
+			routeSource.Shape = xMap.routes.toShapeCollectionFeature();
+		}
+		#endregion
+
+		#region Route change detectors
+		private void Routes_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			// No move and replace support yet
+			switch (e.Action) {
+				case NotifyCollectionChangedAction.Add:
+					foreach (Route route in e.NewItems)
+						route.PropertyChanged += Route_PropertyChanged;
+					updateRouteCollection();
+					break;
+				case NotifyCollectionChangedAction.Remove:
+					foreach (Route route in xMap.routes)
+						route.PropertyChanged -= Route_PropertyChanged;
+					updateRouteCollection();
+					break;
+				case NotifyCollectionChangedAction.Reset:
+					removeAllRoutes();
+					break;
+			}
+		}
+
+		private void Route_PropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			// TODO: implement
+		}
+		#endregion
 
 		#region Pin intializers
 		private void initializePinsLayer()
@@ -206,17 +325,25 @@ namespace Mapbox.iOS
 			if (xMap.pins == null)
 				return;
 
+			// Get the segregated pin type by flat value to avoid multiple instance of the same pin to be added
+			var mapLockedFeatureCollection = xMap.pins.Where((Pin pin) => pin.IsCenterAndFlat);
+			var normalFeatureCollection = xMap.pins.Where((Pin pin) => !pin.IsCenterAndFlat);
+
 			var flatPinsSource = (MGLShapeSource)nStyle.SourceWithIdentifier(mapLockedPinsSourceKey);
 			var normalPinsSource = (MGLShapeSource)nStyle.SourceWithIdentifier(normalPinsSourceKey);
 
-			// Just set to empty pins
-			flatPinsSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(xMap.pins.toShapeSourceArray());
-			normalPinsSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(xMap.pins.toShapeSourceArray());
+			// Just set to empty pins, this will also refreshes with the latest pin and the old pins removed
+			flatPinsSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(mapLockedFeatureCollection.toShapeSourceArray());
+			normalPinsSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(normalFeatureCollection.toShapeSourceArray());
 
 			// Usubscribe each pin to change monitoring
-			foreach (var pin in xMap.pins) {
-				pin.PropertyChanged -= Pin_PropertyChanged;
-			}
+			if (xMap.oldPins != null)
+				foreach (var pin in xMap.oldPins) 
+					pin.PropertyChanged -= Pin_PropertyChanged;
+
+			// Subcribe each new pin to change monitoring
+			foreach (var pin in xMap.pins)
+				pin.PropertyChanged += Pin_PropertyChanged;
 		}
 
 		private void addPin(Pin pin)
@@ -321,8 +448,10 @@ namespace Mapbox.iOS
 		void Map_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
 		{
 			// The entire pins collection itself has been changed
-			if (e.PropertyName == nameof(Map.pins))
+			if (e.PropertyName == Map.pinsProperty.PropertyName)
 				removeAllPins();
+			if (e.PropertyName == Map.routesProperty.PropertyName)
+				removeAllRoutes();
 		}
 
 		void Pins_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -369,12 +498,13 @@ namespace Mapbox.iOS
 			var x = features.ToArray();
 			var polyline = MGLPolylineFeature.PolylineWithCoordinates(ref x[0], (System.nuint)x.Length);
 
-			var geoJsonSource = new MGLShapeSource("line-source", polyline, null);
+			var geoJsonSource = new MGLShapeSource("line-source", polyline, NSDictionary<NSString, NSObject>.FromObjectsAndKeys(new object[]{100}, new object[]{"shit"}));
 			style.AddSource(geoJsonSource);
-
+			//Xamarin.Forms.Color.FromHex("").ToUIColor();
 			var lineStyleLayer = new MGLLineStyleLayer("lineStyleLayer", geoJsonSource);
 			lineStyleLayer.LineColor = NSExpression.FromConstant(Color.FromHex("#d3c717").ToUIColor());
 			lineStyleLayer.LineWidth = NSExpression.FromConstant(NSObject.FromObject(6f));
+			//lineStyleLayer.LineWidth = NSExpression.FromKeyPath("shit");
 			lineStyleLayer.LineJoin = NSExpression.FromConstant(NSObject.FromObject("round"));
 			lineStyleLayer.LineCap = NSExpression.FromConstant(NSObject.FromObject("round"));
 			style.AddLayer(lineStyleLayer);

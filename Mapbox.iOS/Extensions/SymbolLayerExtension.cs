@@ -49,5 +49,42 @@ namespace Mapbox.iOS.Extensions
 		{
 			return features.ToArray();
 		}
+
+		public static List<NSObject> toFeatureList(this IEnumerable<Route> routes)
+		{
+			var features = new List<NSObject>();
+
+			foreach (var route in routes) {
+				var coordinates = route.points.Select((MapBox.Models.Position arg) => {
+					return new CLLocationCoordinate2D(arg.latitude, arg.longitude);
+				});
+
+				var featureInArrayFormat = coordinates.ToArray();
+				var feature = new MGLPolylineFeature();
+				feature.SetCoordinates(ref featureInArrayFormat[0], (System.nuint)featureInArrayFormat.Length);
+				feature.Attributes = NSDictionary<NSString, NSObject>.FromObjectsAndKeys(
+					new object[]{
+						route.borderLineColor,
+						route.lineColor,
+						route.borderLineWidth,
+						route.lineWidth
+					},
+					new object[]{
+						MapboxRenderer.border_line_color_key,
+						MapboxRenderer.line_color_key,
+						MapboxRenderer.border_line_width_key,
+						MapboxRenderer.line_width_key
+					});
+
+				features.Add(feature);
+			}
+
+			return features;
+		}
+
+		public static MGLShapeCollectionFeature toShapeCollectionFeature(this IEnumerable<Route> routes)
+		{
+			return MGLShapeCollectionFeature.ShapeCollectionWithShapes(routes.toFeatureList().ToArray());
+		}
 	}
 }

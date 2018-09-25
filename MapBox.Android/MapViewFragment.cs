@@ -4,67 +4,66 @@ using Android.Runtime;
 using Android.Views;
 using Com.Mapbox.Mapboxsdk.Annotations;
 using Com.Mapbox.Mapboxsdk.Maps;
+using Com.Mapbox.Mapboxsdk.Style.Sources;
+using MapBox.Android.Extensions;
 
 namespace MapBox.Android
 {
-    public class MapViewFragment : SupportMapFragment, MapView.IOnMapChangedListener
-    {
-        public MapView MapView { get; private set; }
+	public class MapViewFragment : SupportMapFragment, MapView.IOnMapChangedListener
+	{
+		public MapView MapView { get; private set; }
 
-        public MapView.IOnMapChangedListener OnMapChangedListener { get; set; }
+		public MapView.IOnMapChangedListener OnMapChangedListener { get; set; }
 
-        public bool StateSaved { get; private set; }
+		public bool StateSaved { get; private set; }
 
-        public MapViewFragment(IntPtr javaReference, JniHandleOwnership transfer)
-            : base(javaReference, transfer)
-        {
-        }
+		public MapViewFragment(IntPtr javaReference, JniHandleOwnership transfer)
+			: base(javaReference, transfer)
+		{
+		}
 
-        public MapViewFragment() : base()
-        {
+		public MapViewFragment() : base()
+		{
 
-        }
+		}
 
-        public override void OnViewCreated(View view, Bundle savedInstanceState)
-        {
-            base.OnViewCreated(view, savedInstanceState);
+		public override void OnViewCreated(View view, Bundle savedInstanceState)
+		{
+			base.OnViewCreated(view, savedInstanceState);
 
-            MapView = view as MapView;
-            MapView?.AddOnMapChangedListener(this);
-        }
+			MapView = view as MapView;
+			MapView?.AddOnMapChangedListener(this);
+		}
 
 
-        public override void OnDestroyView()
-        {
-            base.OnDestroyView();
-            MapView?.RemoveOnMapChangedListener(this);
-        }
+		public override void OnDestroyView()
+		{
+			base.OnDestroyView();
+			MapView?.RemoveOnMapChangedListener(this);
+		}
 
-        public void OnMapChanged(int p0)
-        {
-            OnMapChangedListener?.OnMapChanged(p0);
-        }
+		public void OnMapChanged(int p0)
+		{
+			OnMapChangedListener?.OnMapChanged(p0);
+		}
 
-        public override void OnResume()
-        {
-            base.OnResume();
-        }
+		public override void OnResume()
+		{
+			base.OnResume();
+		}
 
-        public override void OnSaveInstanceState(Bundle outState)
-        {
-            base.OnSaveInstanceState(outState);
-        }
+		public override void OnSaveInstanceState(Bundle outState)
+		{
+			base.OnSaveInstanceState(outState);
+		}
 
-        internal void ToggleInfoWindow(MapboxMap mapboxMap, Marker marker)
-        {
-            if (marker.IsInfoWindowShown)
-            {
-                mapboxMap.DeselectMarker(marker);
-            }
-            else
-            {
-                mapboxMap.SelectMarker(marker);
-            }
-        }
-    }
+		internal void ToggleInfoWindow(MapboxMap mapboxMap, Marker marker)
+		{
+			if (marker.IsInfoWindowShown) {
+				mapboxMap.DeselectMarker(marker);
+			} else {
+				mapboxMap.SelectMarker(marker);
+			}
+		}
+	}
 }

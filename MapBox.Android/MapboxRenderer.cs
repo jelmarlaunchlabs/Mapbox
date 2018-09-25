@@ -26,6 +26,7 @@ namespace MapBox.Android
 {
 	public partial class MapboxRenderer : ViewRenderer<Map, NView>, IOnMapReadyCallback, MapboxMap.IOnMapClickListener
 	{
+		#region Pin constants
 		public const string mapLockedPinsKey = nameof(mapLockedPinsKey);
 		public const string mapLockedPinsSourceKey = nameof(mapLockedPinsSourceKey);
 
@@ -36,6 +37,21 @@ namespace MapBox.Android
 		public const string pin_rotation_key = nameof(pin_rotation_key);
 		public const string pin_size_key = nameof(pin_size_key);
 		public const string pin_offset_key = nameof(pin_offset_key);
+		#endregion
+
+		#region Route constants
+		// The univesal source of all polylines
+		public const string line_source_key = nameof(line_source_key);
+
+		public const string border_line_color_key = nameof(border_line_color_key);
+		public const string border_line_width_key = nameof(border_line_width_key);
+
+		public const string line_color_key = nameof(line_color_key);
+		public const string line_width_key = nameof(line_width_key);
+
+		public const string border_line_layer_key = nameof(border_line_layer_key);
+		public const string line_layer_key = nameof(line_layer_key);
+		#endregion
 
 		private MapViewFragment fragment;
 		private MapboxMap nMap;
@@ -66,8 +82,13 @@ namespace MapBox.Android
 				if (map.pins != null)
 					map.pins.CollectionChanged -= Pins_CollectionChanged;
 
-				//Then remove all pins
+				// Unsubscribe to changes in the collection first
+				if (map.routes != null)
+					map.routes.CollectionChanged -= Routes_CollectionChanged;
+
 				removeAllPins();
+
+				removeAllRoutes();
 
 				// Unubscribe to changes in map bindable properties
 				map.PropertyChanged -= Map_PropertyChanged;
@@ -107,21 +128,123 @@ namespace MapBox.Android
 
 			// This will make sure the map is FULLY LOADED and not just ready
 			// Because it will not load pins/polylines if the operation is executed immediately
-			Device.StartTimer(TimeSpan.FromMilliseconds(100), () => {
+			Device.StartTimer(TimeSpan.FromMilliseconds(650), () => {
 				// Add all pin first
 				initializePinsLayer();
 				addAllReusablePinImages();
 				addAllPins();
 
+				initializeRoutesLayer();
+				addAllRoutes();
+
 				// Then subscribe to pins added
 				if (xMap.pins != null)
 					xMap.pins.CollectionChanged += Pins_CollectionChanged;
+
+				if(xMap.routes!=null)
+					xMap.routes.CollectionChanged += Routes_CollectionChanged;
 
 				// Subscribe to changes in map bindable properties after all pins are loaded
 				xMap.PropertyChanged += Map_PropertyChanged;
 				return false;
 			});
 		}
+
+		#region Route initializers
+		private void initializeRoutesLayer()
+		{
+			// Use one source only
+			var borderLinesLayer = new LineLayer(border_line_layer_key, line_source_key)
+				.WithProperties(
+					PropertyFactory.LineColor(Expression.Get(border_line_color_key)),
+					PropertyFactory.LineWidth(Expression.Get(border_line_width_key)),
+					PropertyFactory.LineJoin("round"),
+					PropertyFactory.LineCap("round"));
+
+			var linesLayer = new LineLayer(line_layer_key, line_source_key)
+				.WithProperties(
+					PropertyFactory.LineColor(Expression.Get(line_color_key)),
+					PropertyFactory.LineWidth(Expression.Get(line_width_key)),
+					PropertyFactory.LineJoin("round"),
+					PropertyFactory.LineCap("round"));
+
+			nMap.AddLayer(borderLinesLayer);
+			nMap.AddLayer(linesLayer);
+		}
+
+		private void addAllRoutes()
+		{
+			if (xMap.routes == null)
+				return;
+
+			// Subscribe all routes to their respective changes
+			foreach (var route in xMap.routes)
+				route.PropertyChanged += Route_PropertyChanged;
+
+			var geoJsonSource = new GeoJsonSource(line_source_key, xMap.routes.toFeatureCollection());
+			nMap.AddSource(geoJsonSource);
+		}
+		#endregion
+
+		#region Post route initialization route operations
+		private void removeAllRoutes()
+		{
+			if (xMap.routes == null)
+				return;
+
+			var routeSource = (GeoJsonSource)nMap.GetSource(line_source_key);
+
+			// Just set to empy route, this will also update with the latest route and the old routes removed
+			routeSource.SetGeoJson(xMap.routes.toFeatureCollection());
+
+			// Unsubscribe all routes
+			if (xMap.oldRoutes != null)
+				foreach (var route in xMap.oldRoutes)
+					route.PropertyChanged -= Route_PropertyChanged;
+
+			// Subscribe new routes
+			foreach (var route in xMap.routes)
+				route.PropertyChanged += Route_PropertyChanged;
+		}
+
+		private void updateRouteCollection()
+		{
+			if (xMap.routes == null)
+				return;
+
+			var routeSource = (GeoJsonSource)nMap.GetSource(line_source_key);
+
+			// Update the route
+			routeSource.SetGeoJson(xMap.routes.toFeatureCollection());
+		}
+		#endregion
+
+		#region Route change detectors
+		void Routes_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			// No move and replace support yet
+			switch (e.Action) {
+				case NotifyCollectionChangedAction.Add:
+					foreach (Route route in e.NewItems)
+						route.PropertyChanged += Route_PropertyChanged;
+					updateRouteCollection();
+					break;
+				case NotifyCollectionChangedAction.Remove:
+					foreach (Route route in xMap.routes)
+						route.PropertyChanged -= Route_PropertyChanged;
+					updateRouteCollection();
+					break;
+				case NotifyCollectionChangedAction.Reset:
+					removeAllRoutes();
+					break;
+			}
+		}
+
+		void Route_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+		{
+			// TODO: Implement
+		}
+		#endregion
 
 		#region Pin initializers
 		/// <summary>
@@ -202,18 +325,24 @@ namespace MapBox.Android
 		{
 			if (xMap.pins == null)
 				return;
+			var mapLockedFeatureCollection = xMap.pins.Where((Pin pin) => pin.IsCenterAndFlat);
+			var normalFeatureCollection = xMap.pins.Where((Pin pin) => !pin.IsCenterAndFlat);
 
 			var flatPinsSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
 			var normalPinsSource = (GeoJsonSource)nMap.GetSource(normalPinsSourceKey);
 
-			// Just set to empty pins
-			flatPinsSource.SetGeoJson(xMap.pins.toFeatureCollection());
-			normalPinsSource.SetGeoJson(xMap.pins.toFeatureCollection());
+			// Just set to empty pins, this will also refreshes with the latest pin and the old pins removed
+			flatPinsSource.SetGeoJson(mapLockedFeatureCollection.toFeatureCollection());
+			normalPinsSource.SetGeoJson(normalFeatureCollection.toFeatureCollection());
 
 			// Usubscribe each pin to change monitoring
-			foreach (var pin in xMap.pins) {
-				pin.PropertyChanged -= Pin_PropertyChanged;
-			}
+			if (xMap.oldPins != null)
+				foreach (var pin in xMap.oldPins)
+					pin.PropertyChanged -= Pin_PropertyChanged;
+
+			// Subcribe each new pin to change monitoring
+			foreach (var pin in xMap.pins)
+				pin.PropertyChanged += Pin_PropertyChanged;
 		}
 
 		private void addPin(Pin pin)
@@ -309,10 +438,11 @@ namespace MapBox.Android
 		#region Change detectors
 		void Map_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
 		{
-			if (e.PropertyName == nameof(XMapbox.Map.pins)) {
+			if (e.PropertyName == XMapbox.Map.pinsProperty.PropertyName)
 				// The entire pins collection itself has been changed
 				removeAllPins();
-			}
+			else if (e.PropertyName == XMapbox.Map.routesProperty.PropertyName)
+				removeAllRoutes();
 		}
 
 		void Pins_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -382,7 +512,7 @@ namespace MapBox.Android
 
 				var geoJsonSource = new GeoJsonSource("line-source", featureCollection);
 				nMap.AddSource(geoJsonSource);
-
+				//Xamarin.Forms.Color.FromHex("").ToAndroid();
 				var innerLineLayer = new LineLayer("innerLineLayer", "line-source")
 					.WithProperties(PropertyFactory.LineColor(AGraphics.Color.ParseColor("#e55e5e")),
 									PropertyFactory.LineWidth(new Java.Lang.Float(3f)),

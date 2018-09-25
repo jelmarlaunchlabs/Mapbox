@@ -1,12 +1,14 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using MapBox.Models;
 using Xamarin.Forms;
 
+//[assembly: InternalsVisibleTo("MapBox.Android"), InternalsVisibleTo("Mapbox.iOS")]
 namespace MapBox
 {
 	/// <summary>
 	/// IMPORTANT NOTE: For now, succeeding pins in the pins list will inherit the size of the first
-	/// pin image if it happens to be the same image source, to override this there is imageScaleFactor to temporarily fix this.
+	/// pin image if it happens to be the same image source, to override this there is imageScaleFactor (unique for each pin) to temporarily fix this.
 	/// </summary>
 	public class Pin : BindableObject
 	{
@@ -162,7 +164,7 @@ namespace MapBox
 			set { SetValue(iconOffsetProperty, value); }
 		}
 
-		public Position previousPinPosition { get; set; }
+		internal Position previousPinPosition { get; set; }
 
 		public Pin()
 		{
