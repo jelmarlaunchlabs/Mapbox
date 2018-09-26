@@ -12,11 +12,13 @@ using System.Linq;
 using System.Collections.Specialized;
 using Mapbox.iOS.Extensions;
 using System.ComponentModel;
+using MapBox.Abstractions;
+using MapBox.Models;
 
 [assembly: ExportRenderer(typeof(MapBox.Map), typeof(Mapbox.iOS.MapboxRenderer))]
 namespace Mapbox.iOS
 {
-    public class MapboxRenderer : ViewRenderer<Map, MGLMapView>, IMGLMapViewDelegate, IUIGestureRecognizerDelegate
+    public class MapboxRenderer : ViewRenderer<Map, MGLMapView>, IMGLMapViewDelegate, IUIGestureRecognizerDelegate, IMapFunctions
 	{
 		#region Pin constants
 		public const string mapLockedPinsKey = nameof(mapLockedPinsKey);
@@ -85,6 +87,7 @@ namespace Mapbox.iOS
 				// Subscribe
 				var map = e.NewElement;
 				xMap = map;
+				xMap.mapFunctions = this;
 
 				// Additional operations will be handled in OnMapReady to apply delay
 			}
@@ -103,7 +106,11 @@ namespace Mapbox.iOS
 		{
 			nMap = mGLMapView;
 			nStyle = mGLStyle;
+			nMap.CompassView.Hidden = true;
 			setupGestureRecognizer();
+
+			if (xMap?.initialCameraUpdate != null)
+				updateMapPerspective(xMap.initialCameraUpdate);
 
 			// Add all pin first
 			initializePinsLayer();
@@ -122,27 +129,6 @@ namespace Mapbox.iOS
 
 			// Subscribe to changes in map bindable properties after all pins are loaded
 			xMap.PropertyChanged += Map_PropertyChanged;
-		}
-
-		private void setupGestureRecognizer()
-		{
-			var tapGest = new UITapGestureRecognizer();
-			tapGest.NumberOfTapsRequired = 1;
-			tapGest.CancelsTouchesInView = false;
-			tapGest.Delegate = this;
-			nMap.AddGestureRecognizer(tapGest);
-			tapGest.AddTarget((NSObject obj) => {
-				var gesture = obj as UITapGestureRecognizer;
-				if (gesture.State == UIGestureRecognizerState.Ended) {
-					var point = gesture.LocationInView(nMap);
-					var touchedCooridinate = nMap.ConvertPoint(point, nMap);
-					var position = new MapBox.Models.Position(touchedCooridinate.Latitude, touchedCooridinate.Longitude);
-					var features = nMap.VisibleFeaturesAtPoint(point, new NSSet<NSString>(new NSString[] { new NSString(mapLockedPinsKey), new NSString(normalPinsKey) }));
-
-					if (features.Any() && xMap.pinClickedCommand != null)
-						xMap.pinClickedCommand.Execute(null);
-				}
-			});
 		}
 
 		#region Route initializers
@@ -484,37 +470,78 @@ namespace Mapbox.iOS
 		}
 		#endregion
 
-		private void testPolyline(MGLStyle style)
+		#region Map functions
+		private void setupGestureRecognizer()
 		{
-			var features = new List<CLLocationCoordinate2D> {
-				new CLLocationCoordinate2D(0,0),
-				new CLLocationCoordinate2D(1,1),
-				new CLLocationCoordinate2D(2,2),
-				new CLLocationCoordinate2D(3,3),
-				new CLLocationCoordinate2D(4,4),
-				new CLLocationCoordinate2D(5,5)
-			};
+			var tapGest = new UITapGestureRecognizer();
+			tapGest.NumberOfTapsRequired = 1;
+			tapGest.CancelsTouchesInView = false;
+			tapGest.Delegate = this;
+			nMap.AddGestureRecognizer(tapGest);
+			tapGest.AddTarget((NSObject obj) => {
+				var gesture = obj as UITapGestureRecognizer;
+				if (gesture.State == UIGestureRecognizerState.Ended) {
+					var point = gesture.LocationInView(nMap);
+					var touchedCooridinate = nMap.ConvertPoint(point, nMap);
+					var position = new MapBox.Models.Position(touchedCooridinate.Latitude, touchedCooridinate.Longitude);
+					var features = nMap.VisibleFeaturesAtPoint(point, new NSSet<NSString>(new NSString[] { new NSString(mapLockedPinsKey), new NSString(normalPinsKey) }));
 
-			var x = features.ToArray();
-			var polyline = MGLPolylineFeature.PolylineWithCoordinates(ref x[0], (System.nuint)x.Length);
+					if (features.Any() && xMap.pinClickedCommand != null)
+						xMap.pinClickedCommand.Execute(null);
+				}
+			});
+		}
 
-			var geoJsonSource = new MGLShapeSource("line-source", polyline, NSDictionary<NSString, NSObject>.FromObjectsAndKeys(new object[]{100}, new object[]{"shit"}));
-			style.AddSource(geoJsonSource);
-			//Xamarin.Forms.Color.FromHex("").ToUIColor();
-			var lineStyleLayer = new MGLLineStyleLayer("lineStyleLayer", geoJsonSource);
-			lineStyleLayer.LineColor = NSExpression.FromConstant(Color.FromHex("#d3c717").ToUIColor());
-			lineStyleLayer.LineWidth = NSExpression.FromConstant(NSObject.FromObject(6f));
-			//lineStyleLayer.LineWidth = NSExpression.FromKeyPath("shit");
-			lineStyleLayer.LineJoin = NSExpression.FromConstant(NSObject.FromObject("round"));
-			lineStyleLayer.LineCap = NSExpression.FromConstant(NSObject.FromObject("round"));
-			style.AddLayer(lineStyleLayer);
+		public void moveCamera()
+		{
+			nMap.AddAnnotation(new MGLPointAnnotation() { Coordinate = new CLLocationCoordinate2D(10, 123) });
+			nMap.AddAnnotation(new MGLPointAnnotation() { Coordinate = new CLLocationCoordinate2D(11, 124) });
+			nMap.AddAnnotation(new MGLPointAnnotation() { Coordinate = new CLLocationCoordinate2D(12, 125) });
+			nMap.AddAnnotation(new MGLPointAnnotation() { Coordinate = new CLLocationCoordinate2D(13, 126) });
 
-			var lineStyleLayer2 = new MGLLineStyleLayer("lineStyleLayer2", geoJsonSource);
-			lineStyleLayer2.LineColor = NSExpression.FromConstant(Color.FromHex("#fc0000").ToUIColor());
-			lineStyleLayer2.LineWidth = NSExpression.FromConstant(NSObject.FromObject(3f));
-			lineStyleLayer2.LineJoin = NSExpression.FromConstant(NSObject.FromObject("round"));
-			lineStyleLayer2.LineCap = NSExpression.FromConstant(NSObject.FromObject("round"));
-			style.AddLayer(lineStyleLayer2);
+			var x = MGLShapeCollection.ShapeCollectionWithShapes(new MGLShape[] {
+				new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(10,123)},
+				new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(11,124)},
+				new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(12,125)},
+				new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(13,126)}
+			});
+
+			var c = nMap.CameraThatFitsShape(x, 0, new UIEdgeInsets(0, 0, 0, 0));
+			nMap.SetCamera(c, false);
+
+
+			//nMap.ZoomLevel = 10;
+			//nMap.CenterCoordinate = new CLLocationCoordinate2D(10, 123);
+		}
+		#endregion
+
+		[Export("mapView:regionDidChangeAnimated:")]
+		public void regionDidChangeAnimated(MGLMapView mGLMapView, bool isAnimated)
+		{
+			xMap.currentZoomLevel = nMap.ZoomLevel;
+			xMap.currentMapCenter = nMap.CenterCoordinate.toFormsPosition();
+		}
+
+		public void updateMapPerspective(ICameraPerspective cameraPerspective)
+		{
+			if (nMap == null)
+				return;
+
+			if (cameraPerspective is CenterAndZoomCameraPerspective centerAndZoom) {
+				nMap.ZoomLevel = centerAndZoom.zoomLevel;
+				nMap.CenterCoordinate = centerAndZoom.position.toNativeCLLocationCoordinate2D();
+			} else if (cameraPerspective is CoordinatesAndPaddingCameraPerspective span) {
+				var shapes = span.positions.Select((Position p) => new MGLPointFeature { Coordinate = new CLLocationCoordinate2D(p.latitude, p.longitude) });
+				var shapeCollecton = MGLShapeCollection.ShapeCollectionWithShapes(shapes.ToArray());
+				var camera = nMap.CameraThatFitsShape(
+					shapeCollecton,
+					0,
+					new UIEdgeInsets((System.nfloat)span.padding.Top,
+									 (System.nfloat)span.padding.Left,
+									 (System.nfloat)span.padding.Bottom,
+									 (System.nfloat)span.padding.Right));
+				nMap.SetCamera(camera, false);
+			}
 		}
 	}
 }

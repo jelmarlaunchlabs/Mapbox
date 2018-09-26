@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using MapBox;
+using MapBox.Factory;
 using MapBox.Models;
 using Xamarin.Forms;
 
@@ -15,6 +16,8 @@ namespace MapboxTester
         public MainPage()
         {
 			InitializeComponent();
+			map.initialCameraUpdate = CameraPerspectiveFactory.fromCenterAndZoomLevel(new Position(10.317119, 123.764238), 10);
+			map.moveMapToRegion(CameraPerspectiveFactory.fromCenterAndZoomLevel(new Position(10.317119, 123.764238), 10));
 			// Initialize pins
 			map.pins = new ObservableCollection<Pin>{
 				new Pin{
@@ -164,6 +167,6 @@ namespace MapboxTester
 				});
 				return false;
 			});
-        }
+		}
     }
 }

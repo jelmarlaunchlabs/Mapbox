@@ -73,6 +73,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DependencyService\DisplayMetricsImplementation.cs" />
     <Compile Include="Extensions\SymbolLayerExtension.cs" />
+    <Compile Include="Extensions\MapExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MapBox\MapBox.csproj">

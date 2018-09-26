@@ -181,6 +181,7 @@
     <Compile Include="MapViewFragment.cs" />
     <Compile Include="DependecyService\DisplayMetricsImplementation.cs" />
     <Compile Include="Extension\SymbolLayerExtension.cs" />
+    <Compile Include="Extension\MapExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\AboutResources.txt" />

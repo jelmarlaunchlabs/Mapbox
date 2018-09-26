@@ -20,11 +20,15 @@ using System.Collections.Specialized;
 using Com.Mapbox.Mapboxsdk.Style.Expressions;
 using System.Linq;
 using Com.Mapbox.Mapboxsdk.Geometry;
+using Com.Mapbox.Mapboxsdk.Camera;
+using MapBox.Android.Extension;
+using MapBox.Abstractions;
+using MapBox.Models;
 
 [assembly: ExportRenderer(typeof(MapBox.Map), typeof(MapBox.Android.MapboxRenderer))]
 namespace MapBox.Android
 {
-	public partial class MapboxRenderer : ViewRenderer<Map, NView>, IOnMapReadyCallback, MapboxMap.IOnMapClickListener
+	public partial class MapboxRenderer : ViewRenderer<Map, NView>, IOnMapReadyCallback, MapboxMap.IOnMapClickListener, IMapFunctions
 	{
 		#region Pin constants
 		public const string mapLockedPinsKey = nameof(mapLockedPinsKey);
@@ -86,6 +90,9 @@ namespace MapBox.Android
 				if (map.routes != null)
 					map.routes.CollectionChanged -= Routes_CollectionChanged;
 
+				// Native map unsubscribe
+				nMap.CameraIdle -= NMap_CameraIdle;
+
 				removeAllPins();
 
 				removeAllRoutes();
@@ -97,6 +104,7 @@ namespace MapBox.Android
 				// Subscribe
 				var map = e.NewElement;
 				xMap = map;
+				xMap.mapFunctions = this;
 
 				// Additional operations will be handled in OnMapReady to apply delay
 			}
@@ -124,7 +132,12 @@ namespace MapBox.Android
 			nMap = mapBox;
 			nMap.SetStyle("mapbox://styles/mapbox/streets-v9");
 			//nMap.SetStyle("mapbox://styles/mapbox/light-v9");
+			nMap.UiSettings.CompassEnabled = false;
 			nMap.AddOnMapClickListener(this);
+			nMap.CameraIdle += NMap_CameraIdle;
+
+			if (xMap?.initialCameraUpdate != null)
+				updateMapPerspective(xMap.initialCameraUpdate);
 
 			// This will make sure the map is FULLY LOADED and not just ready
 			// Because it will not load pins/polylines if the operation is executed immediately
@@ -149,6 +162,8 @@ namespace MapBox.Android
 				return false;
 			});
 		}
+
+
 
 		#region Route initializers
 		private void initializeRoutesLayer()
@@ -475,6 +490,7 @@ namespace MapBox.Android
 		}
 		#endregion
 
+		#region Map functions
 		public void OnMapClick(LatLng point)
 		{
 			var mapLockedPinsLayer = (SymbolLayer)nMap.GetLayer(mapLockedPinsKey);
@@ -490,45 +506,58 @@ namespace MapBox.Android
 				xMap.pinClickedCommand.Execute(null);
 		}
 
-		private void testPolyLine()
+		public void moveCamera()
 		{
-			Device.StartTimer(TimeSpan.FromMilliseconds(50), () => {
+			//nMap.MoveCamera(CameraUpdateFactory.NewLatLngZoom(new LatLng(10, 123), 1));
 
-				var routeCoordinates = new List<Com.Mapbox.Geojson.Point>{
-					Com.Mapbox.Geojson.Point.FromLngLat(0,0),
-					Com.Mapbox.Geojson.Point.FromLngLat(1,1),
-					Com.Mapbox.Geojson.Point.FromLngLat(2,2),
-					Com.Mapbox.Geojson.Point.FromLngLat(3,3),
-					Com.Mapbox.Geojson.Point.FromLngLat(4,4),
-					Com.Mapbox.Geojson.Point.FromLngLat(5,5)
-				};
+			nMap.AddMarker(new MarkerOptions().SetPosition(new LatLng(10,123)));
+			nMap.AddMarker(new MarkerOptions().SetPosition(new LatLng(11,124)));
+			nMap.AddMarker(new MarkerOptions().SetPosition(new LatLng(12,125)));
+			nMap.AddMarker(new MarkerOptions().SetPosition(new LatLng(13,126)));
 
-				var lineString = LineString.FromLngLats(routeCoordinates);
+			var x = nMap.GetCameraForGeometry(
+				Com.Mapbox.Geojson.GeometryCollection.FromGeometries(
+					new List<IGeometry>{
+						Com.Mapbox.Geojson.Point.FromLngLat(123,10),
+						Com.Mapbox.Geojson.Point.FromLngLat(124,11),
+						Com.Mapbox.Geojson.Point.FromLngLat(125,12),
+						Com.Mapbox.Geojson.Point.FromLngLat(126,13)
+					}),new int[]{500,50,50,500}); // left, top, right, bottom
+			nMap.MoveCamera(CameraUpdateFactory.NewCameraPosition(x));
 
-				var featureCollection = FeatureCollection.FromFeatures(
-					new Feature[] {
-						Feature.FromGeometry(lineString)
+			//nMap.GetCameraForLatLngBounds(
+				//new LatLngBounds.Builder().Include(new LatLng(10, 123)).);
+		}
+		#endregion
+
+		void NMap_CameraIdle(object sender, EventArgs e)
+		{
+			xMap.currentZoomLevel = nMap.CameraPosition.Zoom;
+			xMap.currentMapCenter = nMap.CameraPosition.Target.toFormsPostion();
+		}
+
+		public void updateMapPerspective(ICameraPerspective cameraPerspective)
+		{
+			if (nMap == null)
+				return;
+
+			if (cameraPerspective is CenterAndZoomCameraPerspective centerAndZoom) {
+				nMap.MoveCamera(CameraUpdateFactory.NewLatLngZoom(centerAndZoom.position.toNativeLatLng(), centerAndZoom.zoomLevel));
+			} else if (cameraPerspective is CoordinatesAndPaddingCameraPerspective span) {
+				var list = span.positions.Select((Position p) => new LatLng(p.latitude, p.longitude));
+				var builder = new LatLngBounds.Builder();
+				builder.Includes(list.ToList());
+
+				var camera = nMap.GetCameraForLatLngBounds(
+					builder.Build(),
+					new int[]{
+						(int)span.padding.Left,
+						(int)span.padding.Top,
+						(int)span.padding.Right,
+						(int)span.padding.Bottom
 					});
-
-				var geoJsonSource = new GeoJsonSource("line-source", featureCollection);
-				nMap.AddSource(geoJsonSource);
-				//Xamarin.Forms.Color.FromHex("").ToAndroid();
-				var innerLineLayer = new LineLayer("innerLineLayer", "line-source")
-					.WithProperties(PropertyFactory.LineColor(AGraphics.Color.ParseColor("#e55e5e")),
-									PropertyFactory.LineWidth(new Java.Lang.Float(3f)),
-									PropertyFactory.LineJoin("round"),
-									PropertyFactory.LineCap("round"));
-				var outerLineLayer = new LineLayer("outerLineLayer", "line-source")
-					.WithProperties(PropertyFactory.LineColor(AGraphics.Color.ParseColor("#5677d8")),
-									PropertyFactory.LineWidth(new Java.Lang.Float(6f)),
-									PropertyFactory.LineJoin("round"),
-									PropertyFactory.LineCap("round"));
-
-
-				nMap.AddLayer(outerLineLayer);
-				nMap.AddLayer(innerLineLayer);
-				return false;
-			});
+				nMap.MoveCamera(CameraUpdateFactory.NewCameraPosition(camera));
+			}
 		}
 	}
 }

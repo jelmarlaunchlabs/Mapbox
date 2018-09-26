@@ -3,6 +3,8 @@ using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using MapBox.Abstractions;
+using MapBox.Models;
 using Xamarin.Forms;
 
 [assembly: InternalsVisibleTo("MapBox.Android"), InternalsVisibleTo("Mapbox.iOS")]
@@ -13,6 +15,7 @@ namespace MapBox
 		internal Assembly callerAssembly { get; set; }
 		internal ObservableCollection<Pin> oldPins { get; set; }
 		internal ObservableCollection<Route> oldRoutes { get; set; }
+		internal IMapFunctions mapFunctions { get; set; }
 
 		public static readonly BindableProperty pinsProperty = BindableProperty.Create(
 			nameof(pins),
@@ -63,11 +66,61 @@ namespace MapBox
 			get { return (ICommand)GetValue(pinClickedCommandProperty); }
 			set { SetValue(pinClickedCommandProperty, value); }
 		}
+
+		public static readonly BindableProperty currentZoomLevelProperty = BindableProperty.Create(
+			nameof(currentZoomLevel),
+			typeof(double),
+			typeof(Map),
+			default(double),
+			BindingMode.OneWayToSource,
+			propertyChanged: (bindable, p1, p2) => {
+				var view = bindable as Map;
+				var newValue = (double)p2;
+			}
+		);
+		/// <summary>
+		/// Max zoom level is 22 (the closest to the ground), OneWayToSource binding only
+		/// </summary>
+		/// <value>The current zoom level.</value>
+		public double currentZoomLevel {
+			get { return (double)GetValue(currentZoomLevelProperty); }
+			set { SetValue(currentZoomLevelProperty, value); }
+		}
+
+		public static readonly BindableProperty currentMapCenterProperty = BindableProperty.Create(
+			nameof(currentMapCenter),
+			typeof(Position),
+			typeof(Map),
+			default(Position),
+			BindingMode.OneWayToSource,
+			propertyChanged: (bindable, p1, p2) => {
+				var view = bindable as Map;
+				var newValue = (Position)p2;
+			}
+		);
+		/// <summary>
+		/// OneWayToSource binding only.
+		/// </summary>
+		/// <value>The current map center.</value>		public Position currentMapCenter {
+			get { return (Position)GetValue(currentMapCenterProperty); }
+			set { SetValue(currentMapCenterProperty, value); }
+		}
+
+		public ICameraPerspective initialCameraUpdate { get; set; }
+
 		public Map()
 		{
 			callerAssembly = Assembly.GetCallingAssembly();
 			//// One time pin set only
 			//this.SetValue(pinsProperty, new ObservableCollection<Pin>());
+		}
+
+		public void moveMapToRegion(ICameraPerspective cameraPerspective)
+		{
+			if (cameraPerspective == null || this.mapFunctions == null)
+				return;
+
+			this.mapFunctions.updateMapPerspective(cameraPerspective);
 		}
 	}
 }
