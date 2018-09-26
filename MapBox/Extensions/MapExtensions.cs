@@ -70,16 +70,14 @@ namespace MapBox.Extensions
 
 			return d;
 		}
-		public static void animatePin(this Position origin, Position destination, ICommand updateCommand)
+		public static void animatePin(Action<double> updateCallback)
 		{
-			if (updateCommand == null)
+			if (updateCallback == null)
 				return;
 
 			animatorView.Animate(
 				"pinAnimation",
-				(double d) => {
-					updateCommand.Execute(d);
-				},
+				updateCallback,
 				easing: Easing.Linear);
 		}
 	}

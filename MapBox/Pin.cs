@@ -17,12 +17,7 @@ namespace MapBox
 			typeof(string),
 			typeof(Pin),
 			default(string),
-			BindingMode.OneWay,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Pin;
-				var newValue = (string)p2;
-			}
-		);
+			BindingMode.OneWay);
 		public string image {
 			get { return (string)GetValue(imageProperty); }
 			set { SetValue(imageProperty, value); }
@@ -33,12 +28,7 @@ namespace MapBox
 			typeof(bool),
 			typeof(Pin),
 			default(bool),
-			BindingMode.OneWay,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Pin;
-				var newValue = (bool)p2;
-			}
-		);
+			BindingMode.OneWay);
 		public bool IsCenterAndFlat {
 			get { return (bool)GetValue(IsCenterAndFlatProperty); }
 			set { SetValue(IsCenterAndFlatProperty, value); }
@@ -49,12 +39,7 @@ namespace MapBox
 			typeof(double),
 			typeof(Pin),
 			default(double),
-			BindingMode.OneWay,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Pin;
-				var newValue = (double)p2;
-			}
-		);
+			BindingMode.OneWay);
 
 		/// <summary>
 		/// Ignored if IsCenterAndFlat = false
@@ -70,12 +55,7 @@ namespace MapBox
 			typeof(double),
 			typeof(Pin),
 			(double)50,
-			BindingMode.OneWay,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Pin;
-				var newValue = (double)p2;
-			}
-		);
+			BindingMode.OneWay);
 		/// <summary>
 		/// Note this is the base image width, the final width will be decided by setting the factor
 		/// </summary>
@@ -90,12 +70,7 @@ namespace MapBox
 			typeof(double),
 			typeof(Pin),
 			(double)50,
-			BindingMode.OneWay,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Pin;
-				var newValue = (double)p2;
-			}
-		);
+			BindingMode.OneWay);
 		/// <summary>
 		/// Note this is the base image height, the final height will be decided by setting the factor
 		/// </summary>
@@ -110,12 +85,7 @@ namespace MapBox
 			typeof(double),
 			typeof(Pin),
 			(double)1,
-			BindingMode.OneWay,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Pin;
-				var newValue = (double)p2;
-			}
-		);
+			BindingMode.OneWay);
 		/// <summary>
 		/// This is the scaling factor, the number in this will decide the final size of the image PER pin.
 		/// </summary>
@@ -131,11 +101,10 @@ namespace MapBox
 			typeof(Pin),
 			default(Position),
 			BindingMode.OneWay,
-			propertyChanged: (bindable, p1, p2) => {
+			propertyChanging: (bindable, oldValue, newValue) => {
 				var view = bindable as Pin;
-				view.previousPinPosition = (Position)p1;
-				var newValue = (Position)p2;
-
+				// Need this to be called in PropertyChanging so that it will fire first before anything else
+				view.previousPinPosition = (Position)oldValue;
 			}
 		);
 		public Position position {
@@ -148,14 +117,9 @@ namespace MapBox
 			typeof(Point),
 			typeof(Pin),
 			new Point(0,0),
-			BindingMode.OneWay,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Pin;
-				var newValue = (Point)p2;
-			}
-		);
+			BindingMode.OneWay);
 		/// <summary>
-		/// Positive values indicate right and down, ignored if IsCenterAndFlat = false
+		/// Positive values indicate right and down, ignored if IsCenterAndFlat = true
 		/// https://www.mapbox.com/mapbox-gl-js/style-spec/#layout-symbol-icon-offset
 		/// </summary>
 		/// <value>The icon offset.</value>

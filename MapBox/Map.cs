@@ -12,11 +12,16 @@ namespace MapBox
 {
     public class Map : View
     {
+		public event EventHandler regionChangedIdle;
+
+		#region Internal properties
 		internal Assembly callerAssembly { get; set; }
 		internal ObservableCollection<Pin> oldPins { get; set; }
 		internal ObservableCollection<Route> oldRoutes { get; set; }
 		internal IMapFunctions mapFunctions { get; set; }
+		#endregion
 
+		#region Bindable Properties
 		public static readonly BindableProperty pinsProperty = BindableProperty.Create(
 			nameof(pins),
 			typeof(ObservableCollection<Pin>),
@@ -26,7 +31,6 @@ namespace MapBox
 			propertyChanged: (bindable, p1, p2) => {
 				var view = bindable as Map;
 				view.oldPins = (ObservableCollection<Pin>)p1;
-				var newValue = (ObservableCollection<Pin>)p2;
 			}
 		);
 		public ObservableCollection<Pin> pins {
@@ -43,7 +47,6 @@ namespace MapBox
 			propertyChanged: (bindable, p1, p2) => {
 				var view = bindable as Map;
 				view.oldRoutes = (ObservableCollection<Route>)p1;
-				var newValue = (ObservableCollection<Route>)p2;
 			}
 		);
 		public ObservableCollection<Route> routes {
@@ -56,12 +59,7 @@ namespace MapBox
 			typeof(ICommand),
 			typeof(Map),
 			default(ICommand),
-			BindingMode.OneWay,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Map;
-				var newValue = (ICommand)p2;
-			}
-		);
+			BindingMode.OneWay);
 		public ICommand pinClickedCommand {
 			get { return (ICommand)GetValue(pinClickedCommandProperty); }
 			set { SetValue(pinClickedCommandProperty, value); }
@@ -72,12 +70,7 @@ namespace MapBox
 			typeof(double),
 			typeof(Map),
 			default(double),
-			BindingMode.OneWayToSource,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Map;
-				var newValue = (double)p2;
-			}
-		);
+			BindingMode.OneWayToSource);
 		/// <summary>
 		/// Max zoom level is 22 (the closest to the ground), OneWayToSource binding only
 		/// </summary>
@@ -92,27 +85,23 @@ namespace MapBox
 			typeof(Position),
 			typeof(Map),
 			default(Position),
-			BindingMode.OneWayToSource,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Map;
-				var newValue = (Position)p2;
-			}
-		);
+			BindingMode.OneWayToSource);
 		/// <summary>
 		/// OneWayToSource binding only.
 		/// </summary>
-		/// <value>The current map center.</value>		public Position currentMapCenter {
+		/// <value>The current map center.</value>        public Position currentMapCenter {
 			get { return (Position)GetValue(currentMapCenterProperty); }
 			set { SetValue(currentMapCenterProperty, value); }
 		}
+		#endregion
 
 		public ICameraPerspective initialCameraUpdate { get; set; }
 
 		public Map()
 		{
 			callerAssembly = Assembly.GetCallingAssembly();
-			//// One time pin set only
-			//this.SetValue(pinsProperty, new ObservableCollection<Pin>());
+			this.pins = new ObservableCollection<Pin>();
+			this.routes = new ObservableCollection<Route>();
 		}
 
 		public void moveMapToRegion(ICameraPerspective cameraPerspective)
@@ -122,5 +111,12 @@ namespace MapBox
 
 			this.mapFunctions.updateMapPerspective(cameraPerspective);
 		}
+
+		#region Internal methods
+		internal void regionChanged()
+		{
+			regionChangedIdle?.Invoke(this, new EventArgs());
+		}
+		#endregion
 	}
 }

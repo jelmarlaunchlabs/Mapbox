@@ -119,6 +119,7 @@ namespace MapboxTester
 
 				// Remove pin
 				Device.StartTimer(TimeSpan.FromSeconds(10), () => {
+					map.moveMapToRegion(CameraPerspectiveFactory.fromCenterAndZoomLevel(new Position(11.273095, 124.057075), 10));
 					map.pins.Remove(map.pins[2]);
 					map.routes.Remove(map.routes[2]);
 

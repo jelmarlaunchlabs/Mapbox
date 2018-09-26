@@ -66,7 +66,7 @@ namespace Mapbox.iOS.Extensions
 					new object[]{
 						route.borderLineColor,
 						route.lineColor,
-						route.borderLineWidth,
+						(route.borderLineWidth * 2 + route.lineWidth),
 						route.lineWidth
 					},
 					new object[]{

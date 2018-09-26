@@ -53,7 +53,7 @@ namespace MapBox.Android.Extensions
 				var feature = Feature.FromGeometry(lineString);
 				feature.AddStringProperty(MapboxRenderer.border_line_color_key, route.borderLineColor);
 				feature.AddStringProperty(MapboxRenderer.line_color_key, route.lineColor);
-				feature.AddNumberProperty(MapboxRenderer.border_line_width_key, (Java.Lang.Number)route.borderLineWidth);
+				feature.AddNumberProperty(MapboxRenderer.border_line_width_key, (Java.Lang.Number)(route.borderLineWidth * 2 + route.lineWidth));
 				feature.AddNumberProperty(MapboxRenderer.line_width_key, (Java.Lang.Number)route.lineWidth);
 
 				features.Add(feature);

@@ -14,6 +14,7 @@ using Mapbox.iOS.Extensions;
 using System.ComponentModel;
 using MapBox.Abstractions;
 using MapBox.Models;
+using MapBox.Helpers;
 
 [assembly: ExportRenderer(typeof(MapBox.Map), typeof(Mapbox.iOS.MapboxRenderer))]
 namespace Mapbox.iOS
@@ -112,13 +113,14 @@ namespace Mapbox.iOS
 			if (xMap?.initialCameraUpdate != null)
 				updateMapPerspective(xMap.initialCameraUpdate);
 
+			// Initialize route first so that it will be the first in the layer list z-index = 0
+			initializeRoutesLayer();
+			addAllRoutes();
+
 			// Add all pin first
 			initializePinsLayer();
 			addAllReusablePinImages();
 			addAllPins();
-
-			initializeRoutesLayer();
-			addAllRoutes();
 
 			// Then subscribe to pins added
 			if (xMap.pins != null)
@@ -264,6 +266,9 @@ namespace Mapbox.iOS
 
 		private void addAllReusablePinImages()
 		{
+			if (xMap.pins == null)
+				return;
+
 			foreach (var pin in xMap.pins) {
 				var uiImage = nStyle.ImageForName(pin.image);
 
@@ -399,17 +404,19 @@ namespace Mapbox.iOS
 				(Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat && arg != pin).toFeatureList();
 			var geoJsonSource = (MGLShapeSource)nStyle.SourceWithIdentifier(mapLockedPinsSourceKey);
 
-			pin.previousPinPosition.animatePin(
-				pin.position,
-				new Command<double>((d) => {
+			MapBox.Extensions.MapExtensions.animatePin(
+				(double d) => {
+					var theCurrentAnimationJump = SphericalUtil.interpolate(pin.previousPinPosition, pin.position, d);
+					var theCurrentHeading = SphericalUtil.computeHeading(pin.previousPinPosition, pin.position);
+
 					var feature = new MGLPointFeature {
-						Coordinate = new CLLocationCoordinate2D(pin.position.latitude * d,
-																pin.position.longitude * d)
+						Coordinate = new CLLocationCoordinate2D(theCurrentAnimationJump.latitude,
+																theCurrentAnimationJump.longitude)
 					};
 					feature.Attributes = NSDictionary<NSString, NSObject>.FromObjectsAndKeys(
 						new object[] { 
 							pin.image,
-							pin.heading,
+							theCurrentHeading,
 							pin.imageScaleFactor
 						},
 						new object[] {
@@ -426,7 +433,7 @@ namespace Mapbox.iOS
 
 					// Remove the feature so that there will be no multiple instances of it accross the animation path
 					pinsWithSimilarKeyAndNotThisPin.Remove(feature);
-				}));
+				});
 		}
 		#endregion
 
@@ -487,7 +494,17 @@ namespace Mapbox.iOS
 					var features = nMap.VisibleFeaturesAtPoint(point, new NSSet<NSString>(new NSString[] { new NSString(mapLockedPinsKey), new NSString(normalPinsKey) }));
 
 					if (features.Any() && xMap.pinClickedCommand != null)
-						xMap.pinClickedCommand.Execute(null);
+						if (features[0] is MGLPointFeature mGLPointFeature) {
+							var p = mGLPointFeature.Coordinate.toFormsPosition();
+							var image = mGLPointFeature.Attributes.ValueForKey(new NSString(pin_image_key));
+
+							// TODO: Return the actual pin
+							xMap.pinClickedCommand.Execute(
+								new Pin {
+									image = image.ToString(),
+									position = p
+								});
+						}
 				}
 			});
 		}
@@ -520,6 +537,7 @@ namespace Mapbox.iOS
 		{
 			xMap.currentZoomLevel = nMap.ZoomLevel;
 			xMap.currentMapCenter = nMap.CenterCoordinate.toFormsPosition();
+			xMap.regionChanged();
 		}
 
 		public void updateMapPerspective(ICameraPerspective cameraPerspective)

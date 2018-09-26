@@ -24,6 +24,7 @@ using Com.Mapbox.Mapboxsdk.Camera;
 using MapBox.Android.Extension;
 using MapBox.Abstractions;
 using MapBox.Models;
+using MapBox.Helpers;
 
 [assembly: ExportRenderer(typeof(MapBox.Map), typeof(MapBox.Android.MapboxRenderer))]
 namespace MapBox.Android
@@ -142,13 +143,14 @@ namespace MapBox.Android
 			// This will make sure the map is FULLY LOADED and not just ready
 			// Because it will not load pins/polylines if the operation is executed immediately
 			Device.StartTimer(TimeSpan.FromMilliseconds(650), () => {
+				// Initialize route first so that it will be the first in the layer list z-index = 0
+				initializeRoutesLayer();
+				addAllRoutes();
+
 				// Add all pin first
 				initializePinsLayer();
 				addAllReusablePinImages();
 				addAllPins();
-
-				initializeRoutesLayer();
-				addAllRoutes();
 
 				// Then subscribe to pins added
 				if (xMap.pins != null)
@@ -295,6 +297,9 @@ namespace MapBox.Android
 
 		private void addAllReusablePinImages()
 		{
+			if (xMap.pins == null)
+				return;
+
 			foreach (var pin in xMap.pins) {
 				var bitmap = nMap.GetImage(pin.image);
 
@@ -428,14 +433,16 @@ namespace MapBox.Android
 				(Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat && arg != pin).toFeatureList();
 			var geoJsonSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
 
-			pin.previousPinPosition.animatePin(
-				pin.position,
-				new Xamarin.Forms.Command<double>((d) => {
+			MapBox.Extensions.MapExtensions.animatePin(
+				(double d) => {
+					var theCurrentAnimationJump = SphericalUtil.interpolate(pin.previousPinPosition, pin.position, d);
+					var theCurrentHeading = SphericalUtil.computeHeading(pin.previousPinPosition, pin.position);
+
 					var feature = Feature.FromGeometry(
-						Com.Mapbox.Geojson.Point.FromLngLat(pin.position.longitude * d,
-															pin.position.latitude * d));
+						Com.Mapbox.Geojson.Point.FromLngLat(theCurrentAnimationJump.longitude,
+															theCurrentAnimationJump.latitude));
 					feature.AddStringProperty(MapboxRenderer.pin_image_key, pin.image);
-					feature.AddNumberProperty(MapboxRenderer.pin_rotation_key, (Java.Lang.Number)pin.heading);
+					feature.AddNumberProperty(MapboxRenderer.pin_rotation_key, (Java.Lang.Number)theCurrentHeading);
 					feature.AddNumberProperty(MapboxRenderer.pin_size_key, (Java.Lang.Number)pin.imageScaleFactor);
 
 					// Update the feature thats need animating
@@ -446,7 +453,8 @@ namespace MapBox.Android
 
 					// Remove the feature so that there will be no multiple instances of it accross the animation path
 					pinsWithSimilarKeyAndNotThisPin.Remove(feature);
-				}));
+				});
+
 		}
 		#endregion
 
@@ -501,8 +509,8 @@ namespace MapBox.Android
 
 			System.Diagnostics.Debug.WriteLine($"Features: {features}");
 
-			// TODO: Return the pin clicked
-			if (features.Count > 0 && xMap.pinClickedCommand != null)
+			// TODO: Return the actual pin clicked
+			if (features.Any() && xMap.pinClickedCommand != null)
 				xMap.pinClickedCommand.Execute(null);
 		}
 
@@ -534,6 +542,7 @@ namespace MapBox.Android
 		{
 			xMap.currentZoomLevel = nMap.CameraPosition.Zoom;
 			xMap.currentMapCenter = nMap.CameraPosition.Target.toFormsPostion();
+			xMap.regionChanged();
 		}
 
 		public void updateMapPerspective(ICameraPerspective cameraPerspective)
@@ -544,6 +553,7 @@ namespace MapBox.Android
 			if (cameraPerspective is CenterAndZoomCameraPerspective centerAndZoom) {
 				nMap.MoveCamera(CameraUpdateFactory.NewLatLngZoom(centerAndZoom.position.toNativeLatLng(), centerAndZoom.zoomLevel));
 			} else if (cameraPerspective is CoordinatesAndPaddingCameraPerspective span) {
+				var density = Resources.DisplayMetrics.Density;
 				var list = span.positions.Select((Position p) => new LatLng(p.latitude, p.longitude));
 				var builder = new LatLngBounds.Builder();
 				builder.Includes(list.ToList());
@@ -551,10 +561,10 @@ namespace MapBox.Android
 				var camera = nMap.GetCameraForLatLngBounds(
 					builder.Build(),
 					new int[]{
-						(int)span.padding.Left,
-						(int)span.padding.Top,
-						(int)span.padding.Right,
-						(int)span.padding.Bottom
+						(int)(span.padding.Left * density),
+						(int)(span.padding.Top * density),
+						(int)(span.padding.Right * density),
+						(int)(span.padding.Bottom * density)
 					});
 				nMap.MoveCamera(CameraUpdateFactory.NewCameraPosition(camera));
 			}

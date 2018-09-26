@@ -15,12 +15,7 @@ namespace MapBox
 			typeof(ObservableCollection<Position>),
 			typeof(Route),
 			default(ObservableCollection<Position>),
-			BindingMode.OneWay,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Route;
-				var newValue = (ObservableCollection<Position>)p2;
-			}
-		);
+			BindingMode.OneWay);
 		public ObservableCollection<Position> points {
 			get { return (ObservableCollection<Position>)GetValue(pointsProperty); }
 			set { SetValue(pointsProperty, value); }
@@ -31,12 +26,7 @@ namespace MapBox
 			typeof(string),
 			typeof(Route),
 			"#000000",
-			BindingMode.TwoWay,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Route;
-				var newValue = (string)p2;
-			}
-		);
+			BindingMode.TwoWay);
 		public string borderLineColor {
 			get { return (string)GetValue(borderLineColorProperty); }
 			set { SetValue(borderLineColorProperty, value); }
@@ -47,12 +37,7 @@ namespace MapBox
 			typeof(double),
 			typeof(Route),
 			(double)6,
-			BindingMode.OneWay,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Route;
-				var newValue = (double)p2;
-			}
-		);
+			BindingMode.OneWay);
 		/// <summary>
 		/// This needs to be greater than the main line width
 		/// </summary>
@@ -67,12 +52,7 @@ namespace MapBox
 			typeof(string),
 			typeof(Route),
 			"#000000",
-			BindingMode.TwoWay,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Route;
-				var newValue = (string)p2;
-			}
-		);
+			BindingMode.TwoWay);
 		public string lineColor {
 			get { return (string)GetValue(lineColorProperty); }
 			set { SetValue(lineColorProperty, value); }
@@ -83,12 +63,7 @@ namespace MapBox
 			typeof(double),
 			typeof(Route),
 			(double)3,
-			BindingMode.OneWay,
-			propertyChanged: (bindable, p1, p2) => {
-				var view = bindable as Route;
-				var newValue = (double)p2;
-			}
-		);
+			BindingMode.OneWay);
 		public double lineWidth {
 			get { return (double)GetValue(lineWidthProperty); }
 			set { SetValue(lineWidthProperty, value); }
