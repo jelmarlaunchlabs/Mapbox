@@ -72,7 +72,10 @@ namespace Mapbox.iOS
 
 				// Unsubscribe to changes in the collection first
 				if (map.pins != null)
+				{
 					map.pins.CollectionChanged -= Pins_CollectionChanged;
+					map.DefaultPins.CollectionChanged -= DefaultPins_CollectionChanged;
+				}
 
 				// Unsubscribe to changes in the collection first
 				if (map.routes != null)
@@ -125,7 +128,10 @@ namespace Mapbox.iOS
 
 			// Then subscribe to pins added
 			if (xMap.pins != null)
+			{
 				xMap.pins.CollectionChanged += Pins_CollectionChanged;
+				xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
+			}
 
 			if (xMap.routes != null)
 				xMap.routes.CollectionChanged += Routes_CollectionChanged;
@@ -504,6 +510,25 @@ namespace Mapbox.iOS
 			if (e.PropertyName == Pin.positionProperty.PropertyName)
 				animateLocationChange(pin);
 		}
+
+		void DefaultPins_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			switch(e.Action)
+			{
+				case NotifyCollectionChangedAction.Add:
+					foreach(DefaultPin pin in e.NewItems)
+					{
+						nMap.AddAnnotation(new MGLPointAnnotation() { Coordinate = pin.Position.toNativeCLLocationCoordinate2D(), Title = pin.Title });
+					}
+					break;
+				case NotifyCollectionChangedAction.Remove:
+					//nMap.RemoveAnnotation();
+					break;
+				case NotifyCollectionChangedAction.Reset:
+					//nMap.RemoveAnnotations();
+					break;
+			}
+		}
 		#endregion
 
 		#region Map functions
@@ -523,6 +548,7 @@ namespace Mapbox.iOS
 					var features = nMap.VisibleFeaturesAtPoint(point, new NSSet<NSString>(new NSString[] { new NSString(mapLockedPinsKey), new NSString(normalPinsKey) }));
 
 					if (features.Any() && xMap.pinClickedCommand != null)
+					{
 						if (features[0] is MGLPointFeature mGLPointFeature) {
 							var p = mGLPointFeature.Coordinate.toFormsPosition();
 							var image = mGLPointFeature.Attributes.ValueForKey(new NSString(pin_image_key));
@@ -534,10 +560,27 @@ namespace Mapbox.iOS
 									position = p
 								});
 						}
+					}
+					else
+					{
+						xMap.mapClicked(position);
+					}	
 				}
 			});
 		}
 		#endregion
+
+		[Export("mapView:regionWillChangeAnimated:")]
+		public void regionWillChangeAnimated(MGLMapView mGLMapView, bool animated)
+		{
+			xMap.cameraMoveStarted();
+		}
+
+		[Export("mapViewRegionIsChanging:")]
+		public void regionIsChanging(MGLMapView mGLMapView)
+		{
+			xMap.cameraMoving();
+		}
 
 		[Export("mapView:regionDidChangeAnimated:")]
 		public void regionDidChangeAnimated(MGLMapView mGLMapView, bool isAnimated)
@@ -545,6 +588,8 @@ namespace Mapbox.iOS
 			xMap.currentZoomLevel = nMap.ZoomLevel;
 			xMap.currentMapCenter = nMap.CenterCoordinate.toFormsPosition();
 			xMap.regionChanged();
+
+			xMap.cameraIdled(new Bounds(nMap.VisibleCoordinateBounds.sw.toFormsPosition(), nMap.VisibleCoordinateBounds.ne.toFormsPosition(), nMap.CenterCoordinate.toFormsPosition()));
 		}
 
 		public void updateMapPerspective(ICameraPerspective cameraPerspective)

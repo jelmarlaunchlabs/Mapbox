@@ -8,8 +8,8 @@ namespace MapBox.Models
 
 		public Position(double latitude, double longitude) : this()
 		{
-			this.latitude = latitude;
-			this.longitude = longitude;
+			this.latitude = Math.Min(Math.Max(latitude, -90.0), 90.0);
+			this.longitude = Math.Min(Math.Max(longitude, -180.0), 180.0);
 		}
 
 		public static bool operator ==(Position p1, Position p2)
