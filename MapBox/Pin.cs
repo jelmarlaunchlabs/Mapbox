@@ -3,7 +3,6 @@ using System.Runtime.CompilerServices;
 using MapBox.Models;
 using Xamarin.Forms;
 
-//[assembly: InternalsVisibleTo("MapBox.Android"), InternalsVisibleTo("Mapbox.iOS")]
 namespace MapBox
 {
 	/// <summary>
@@ -58,6 +57,7 @@ namespace MapBox
 			BindingMode.OneWay);
 		/// <summary>
 		/// Note this is the base image width, the final width will be decided by setting the factor
+		/// The width is already scaled!!!
 		/// </summary>
 		/// <value>The width.</value>
 		public double width {
@@ -73,6 +73,7 @@ namespace MapBox
 			BindingMode.OneWay);
 		/// <summary>
 		/// Note this is the base image height, the final height will be decided by setting the factor
+		/// The height is already scaled!!!
 		/// </summary>
 		/// <value>The height.</value>
 		public double height {
@@ -101,20 +102,16 @@ namespace MapBox
 			typeof(Pin),
 			default(Position),
 			BindingMode.OneWay,
-			propertyChanged: (bindable, o, n) => {
-				var view = bindable as Pin;
-			},
 			propertyChanging: (bindable, oldValue, newValue) => {
 				var view = bindable as Pin;
 				// Need this to be called in PropertyChanging so that it will fire first before anything else
 				view.previousPinPosition = (Position)oldValue;
 
-				// Do not request for update if this is the very first update
-				if (!view.hasUpdatedOnce) {
+				// Do not request for update if this is the very first update after this pin was put on the map
+				if (!view.hasUpdatedOnce)
 					view.hasUpdatedOnce = true;
-					return;
-				}
-				view.requestForUpdate = true;
+				else
+					view.requestForUpdate = true;
 			}
 		);
 		public Position position {

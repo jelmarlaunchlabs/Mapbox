@@ -166,8 +166,6 @@ namespace MapBox.Android
 			});
 		}
 
-
-
 		#region Route initializers
 		private void initializeRoutesLayer()
 		{

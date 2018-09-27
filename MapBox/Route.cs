@@ -39,7 +39,7 @@ namespace MapBox
 			(double)6,
 			BindingMode.OneWay);
 		/// <summary>
-		/// This needs to be greater than the main line width
+		/// This is already scaled in both platforms
 		/// </summary>
 		/// <value>The width of the border line.</value>
 		public double borderLineWidth {
@@ -64,6 +64,10 @@ namespace MapBox
 			typeof(Route),
 			(double)3,
 			BindingMode.OneWay);
+		/// <summary>
+		/// This is already scaled in both platforms
+		/// </summary>
+		/// <value>The width of the line.</value>
 		public double lineWidth {
 			get { return (double)GetValue(lineWidthProperty); }
 			set { SetValue(lineWidthProperty, value); }

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Reflection;
 using MapBox.Helpers;
+using Xamarin.Forms;
 
 namespace MapBox.Extensions
 {
@@ -27,6 +28,9 @@ namespace MapBox.Extensions
 		{
 			byte[] buffer = null;
 			var nativeScale = DisplayMetricsHelper.instance.nativeScale;
+			width = Device.RuntimePlatform == Device.Android ? width * nativeScale : width;
+			height = Device.RuntimePlatform == Device.Android ? height * nativeScale : height;
+
 			var address = $"{assembly.GetName().Name}.{fileName.Trim()}";
 			using (var stream = assembly.GetManifestResourceStream(address)) {
 				if (stream == null)
@@ -34,7 +38,7 @@ namespace MapBox.Extensions
 				buffer = new byte[stream.Length];
 				stream.Read(buffer, 0, (int)stream.Length);
 				using (var editableImage = Plugin.ImageEdit.CrossImageEdit.Current.CreateImage(buffer)) {
-					var modified = editableImage.Resize((int)(width * nativeScale), (int)(height * nativeScale)).ToPng();
+					var modified = editableImage.Resize((int)width, (int)height).ToPng();
 					return new MemoryStream(modified);
 				}
 			}

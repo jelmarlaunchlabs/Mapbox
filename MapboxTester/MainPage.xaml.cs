@@ -59,7 +59,7 @@ namespace MapboxTester
 						new Position(2,2)
 					},
 					lineWidth=4,
-					borderLineWidth=8,
+					borderLineWidth=1,
 					lineColor= "#ff0000",
 					borderLineColor = "#00FF00",
 				},
