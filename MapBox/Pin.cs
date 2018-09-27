@@ -101,10 +101,20 @@ namespace MapBox
 			typeof(Pin),
 			default(Position),
 			BindingMode.OneWay,
+			propertyChanged: (bindable, o, n) => {
+				var view = bindable as Pin;
+			},
 			propertyChanging: (bindable, oldValue, newValue) => {
 				var view = bindable as Pin;
 				// Need this to be called in PropertyChanging so that it will fire first before anything else
 				view.previousPinPosition = (Position)oldValue;
+
+				// Do not request for update if this is the very first update
+				if (!view.hasUpdatedOnce) {
+					view.hasUpdatedOnce = true;
+					return;
+				}
+				view.requestForUpdate = true;
 			}
 		);
 		public Position position {
@@ -129,6 +139,8 @@ namespace MapBox
 		}
 
 		internal Position previousPinPosition { get; set; }
+		internal bool hasUpdatedOnce { get; set; }
+		internal bool requestForUpdate { get; set; }
 
 		public Pin()
 		{

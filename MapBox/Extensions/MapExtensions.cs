@@ -70,7 +70,7 @@ namespace MapBox.Extensions
 
 			return d;
 		}
-		public static void animatePin(Action<double> updateCallback)
+		public static void animatePin(Action<double> updateCallback, Action<double, bool> finishedAction, uint animationLength)
 		{
 			if (updateCallback == null)
 				return;
@@ -78,7 +78,9 @@ namespace MapBox.Extensions
 			animatorView.Animate(
 				"pinAnimation",
 				updateCallback,
-				easing: Easing.Linear);
+				length: animationLength,
+				easing: Easing.Linear,
+				finished: finishedAction);
 		}
 	}
 }

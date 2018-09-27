@@ -51,6 +51,7 @@ namespace Mapbox.iOS
 		private Map xMap;
 		private MGLMapView nMap;
 		private MGLStyle nStyle;
+		private bool isPinAnimating;
 
 		public static void init()
         {
@@ -161,9 +162,9 @@ namespace Mapbox.iOS
 			if (xMap.routes == null)
 				return;
 
-			// Subscribe all pins to their respective changes
+			// Subscribe all routes to their respective changes
 			foreach (var route in xMap.routes)
-				route.PropertyChanged += Pin_PropertyChanged;
+				route.PropertyChanged += Route_PropertyChanged;
 
 			var routeSource = (MGLShapeSource)nStyle.SourceWithIdentifier(line_source_key);
 			routeSource.Shape = xMap.routes.toShapeCollectionFeature();
@@ -391,49 +392,77 @@ namespace Mapbox.iOS
 
 		private void animateLocationChange(Pin pin)
 		{
-			// Only animate flat pins
-			if (!pin.IsCenterAndFlat)
-				return;
+			#region Simultaneous pin update
+			System.Threading.Tasks.Task.Run(async () => {
+				// Only animate flat pins
+				if (!pin.IsCenterAndFlat || isPinAnimating)
+					return;
 
-			// The image is the type/class key
-			var key = pin.image;
-			// Find a source that has the same image as this pin
-			var bitmap = nStyle.ImageForName(key);
-			// Get all pins with the same key and same flat value
-			var pinsWithSimilarKeyAndNotThisPin = xMap.pins.Where(
-				(Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat && arg != pin).toFeatureList();
-			var geoJsonSource = (MGLShapeSource)nStyle.SourceWithIdentifier(mapLockedPinsSourceKey);
+				// Wait for pin position assignment in the same call
+				await System.Threading.Tasks.Task.Delay(10);
+				isPinAnimating = true;
 
-			MapBox.Extensions.MapExtensions.animatePin(
-				(double d) => {
-					var theCurrentAnimationJump = SphericalUtil.interpolate(pin.previousPinPosition, pin.position, d);
-					var theCurrentHeading = SphericalUtil.computeHeading(pin.previousPinPosition, pin.position);
+				// Get all pins with the same key and same flat value (animatable pins)
+				var pinsWithSimilarKey = xMap.pins.Where(
+					(Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat).ToArray();
 
-					var feature = new MGLPointFeature {
-						Coordinate = new CLLocationCoordinate2D(theCurrentAnimationJump.latitude,
-																theCurrentAnimationJump.longitude)
-					};
-					feature.Attributes = NSDictionary<NSString, NSObject>.FromObjectsAndKeys(
-						new object[] { 
-							pin.image,
-							theCurrentHeading,
-							pin.imageScaleFactor
+				Device.BeginInvokeOnMainThread(() => {
+					var geoJsonSource = (MGLShapeSource)nStyle.SourceWithIdentifier(mapLockedPinsSourceKey);
+
+					// Update the entire frame
+					MapBox.Extensions.MapExtensions.animatePin(
+						(double d) => {
+							System.Threading.Tasks.Task.Run(() => {
+								var movablePinCount = pinsWithSimilarKey.Count();
+								var features = new List<NSObject>();
+
+								for (int i = 0; i < movablePinCount; i++) {
+									var p = pinsWithSimilarKey[i];
+									Position theCurrentAnimationJump = p.position;
+									double theCurrentHeading = p.heading;
+
+									// Only update the pin if it is the pin that cause this animation call
+									// OR the if it actually requested for a position update before this current animation has not been finished
+									if (pin == p || p.requestForUpdate) {
+										theCurrentAnimationJump = SphericalUtil.interpolate(p.previousPinPosition, p.position, d);
+										theCurrentHeading = SphericalUtil.computeHeading(p.previousPinPosition, p.position);
+										p.heading = theCurrentHeading;
+									}
+
+									var feature = new MGLPointFeature {
+										Coordinate = new CLLocationCoordinate2D(theCurrentAnimationJump.latitude,
+																				theCurrentAnimationJump.longitude)
+									};
+									feature.Attributes = NSDictionary<NSString, NSObject>.FromObjectsAndKeys(
+										new object[] {
+												pin.image,
+												theCurrentHeading,
+												pin.imageScaleFactor
+										},
+										new object[] {
+												MapboxRenderer.pin_image_key,
+												MapboxRenderer.pin_rotation_key,
+												MapboxRenderer.pin_size_key
+										});
+
+									// Add to the new animation frame
+									features.Add(feature);
+								}
+
+								// Update the entire layer
+								Device.BeginInvokeOnMainThread(() => geoJsonSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(features.toShapeSourceArray()));
+							});
 						},
-						new object[] {
-							MapboxRenderer.pin_image_key,
-							MapboxRenderer.pin_rotation_key,
-							MapboxRenderer.pin_size_key
-						});
+						(d, b) => {
+							isPinAnimating = false;
 
-					// Update the feature thats need animating
-					pinsWithSimilarKeyAndNotThisPin.Add(feature);
-
-					// Update the entire layer
-					geoJsonSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(pinsWithSimilarKeyAndNotThisPin.toShapeSourceArray());
-
-					// Remove the feature so that there will be no multiple instances of it accross the animation path
-					pinsWithSimilarKeyAndNotThisPin.Remove(feature);
+							// Stabilize the pins, at this moment all the pins are updated
+							foreach (var p in pinsWithSimilarKey)
+								p.requestForUpdate = false;
+						}, 500);
 				});
+			});
+			#endregion
 		}
 		#endregion
 

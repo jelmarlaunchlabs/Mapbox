@@ -61,6 +61,7 @@ namespace MapBox.Android
 		private MapViewFragment fragment;
 		private MapboxMap nMap;
 		private XMapbox.Map xMap;
+		private bool isPinAnimating;
 
 		public static void init(Context context, string accessToken)
 		{
@@ -142,7 +143,7 @@ namespace MapBox.Android
 
 			// This will make sure the map is FULLY LOADED and not just ready
 			// Because it will not load pins/polylines if the operation is executed immediately
-			Device.StartTimer(TimeSpan.FromMilliseconds(650), () => {
+			Device.StartTimer(TimeSpan.FromMilliseconds(800), () => {
 				// Initialize route first so that it will be the first in the layer list z-index = 0
 				initializeRoutesLayer();
 				addAllRoutes();
@@ -420,41 +421,71 @@ namespace MapBox.Android
 
 		private void animateLocationChange(Pin pin)
 		{
-			// Only animate flat pins
-			if (!pin.IsCenterAndFlat)
-				return;
+			#region Simultaneous pin update
+			System.Threading.Tasks.Task.Run(async () => {
+				// Only animate flat pins
+				if (!pin.IsCenterAndFlat || isPinAnimating)
+					return;
 
-			// The image is the type/class key
-			var key = pin.image;
-			// Find a source that has the same image as this pin
-			var bitmap = nMap.GetImage(key);
-			// Get all pins with the same key and same flat value
-			var pinsWithSimilarKeyAndNotThisPin = xMap.pins.Where(
-				(Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat && arg != pin).toFeatureList();
-			var geoJsonSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
+				// Wait for pin position assignment in the same call
+				await System.Threading.Tasks.Task.Delay(10);
+				isPinAnimating = true;
 
-			MapBox.Extensions.MapExtensions.animatePin(
-				(double d) => {
-					var theCurrentAnimationJump = SphericalUtil.interpolate(pin.previousPinPosition, pin.position, d);
-					var theCurrentHeading = SphericalUtil.computeHeading(pin.previousPinPosition, pin.position);
+				// Get all pins with the same key and same flat value (animatable pins)
+				var pinsWithSimilarKey = xMap.pins.Where(
+					(Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat).ToArray();
 
-					var feature = Feature.FromGeometry(
-						Com.Mapbox.Geojson.Point.FromLngLat(theCurrentAnimationJump.longitude,
-															theCurrentAnimationJump.latitude));
-					feature.AddStringProperty(MapboxRenderer.pin_image_key, pin.image);
-					feature.AddNumberProperty(MapboxRenderer.pin_rotation_key, (Java.Lang.Number)theCurrentHeading);
-					feature.AddNumberProperty(MapboxRenderer.pin_size_key, (Java.Lang.Number)pin.imageScaleFactor);
+				Device.BeginInvokeOnMainThread(() => {
+					var geoJsonSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
 
-					// Update the feature thats need animating
-					pinsWithSimilarKeyAndNotThisPin.Add(feature);
+					// Update the entire frame
+					MapBox.Extensions.MapExtensions.animatePin(
+						(double d) => {
+							System.Threading.Tasks.Task.Run(() => {
+								var movablePinCount = pinsWithSimilarKey.Count();
+								var features = new List<Feature>();
 
-					// Update the entire layer
-					geoJsonSource.SetGeoJson(pinsWithSimilarKeyAndNotThisPin.toFeatureCollection());
+								for (int i = 0; i < movablePinCount; i++) {
+									var p = pinsWithSimilarKey[i];
+									Position theCurrentAnimationJump = p.position;
+									double theCurrentHeading = p.heading;
 
-					// Remove the feature so that there will be no multiple instances of it accross the animation path
-					pinsWithSimilarKeyAndNotThisPin.Remove(feature);
+									// Only update the pin if it is the pin that cause this animation call
+									// OR the if it actually requested for a position update before this current animation has not been finished
+									if (pin == p || p.requestForUpdate) {
+										theCurrentAnimationJump = SphericalUtil.interpolate(p.previousPinPosition, p.position, d);
+										theCurrentHeading = SphericalUtil.computeHeading(p.previousPinPosition, p.position);
+										p.heading = theCurrentHeading;
+									}
+
+									var feature = Feature.FromGeometry(
+										Com.Mapbox.Geojson.Point.FromLngLat(theCurrentAnimationJump.longitude,
+																			theCurrentAnimationJump.latitude));
+									feature.AddStringProperty(MapboxRenderer.pin_image_key, p.image);
+									feature.AddNumberProperty(MapboxRenderer.pin_rotation_key, (Java.Lang.Number)theCurrentHeading);
+									feature.AddNumberProperty(MapboxRenderer.pin_size_key, (Java.Lang.Number)p.imageScaleFactor);
+
+									// Add to the new animation frame
+									features.Add(feature);
+								}
+
+								// Extension method bypass, fromFeatures accepts IList as parameter
+								var featureCollection = FeatureCollection.FromFeatures(features);
+
+								// Update the entire layer
+								Device.BeginInvokeOnMainThread(() => geoJsonSource.SetGeoJson(featureCollection));
+							});
+						},
+						(d, b) => {
+							isPinAnimating = false;
+
+							// Stabilize the pins, at this moment all the pins are updated
+							foreach (var p in pinsWithSimilarKey)
+								p.requestForUpdate = false;
+						}, 500);
 				});
-
+			});
+			#endregion
 		}
 		#endregion
 
