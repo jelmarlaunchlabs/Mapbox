@@ -193,8 +193,8 @@ namespace Mapbox.iOS
 				foreach (var route in xMap.oldRoutes)
 					route.PropertyChanged -= Route_PropertyChanged;
 				xMap.oldRoutes.CollectionChanged -= Routes_CollectionChanged;
-				xMap.routes.CollectionChanged += Routes_CollectionChanged;
 			}
+			xMap.routes.CollectionChanged += Routes_CollectionChanged;
 
 			// Subscribe new routes
 			foreach (var route in xMap.routes)
@@ -342,8 +342,8 @@ namespace Mapbox.iOS
 				foreach (var pin in xMap.oldPins)
 					pin.PropertyChanged -= Pin_PropertyChanged;
 				xMap.oldPins.CollectionChanged -= Pins_CollectionChanged;
-				xMap.pins.CollectionChanged += Pins_CollectionChanged;
 			}
+			xMap.pins.CollectionChanged += Pins_CollectionChanged;
 
 			// Subcribe each new pin to change monitoring
 			foreach (var pin in xMap.pins)
@@ -486,6 +486,11 @@ namespace Mapbox.iOS
 				removeAllPins();
 			if (e.PropertyName == Map.routesProperty.PropertyName)
 				removeAllRoutes();
+			if (e.PropertyName == Map.DefaultPinsProperty.PropertyName) {
+				if (xMap.oldDefaultPins != null)
+					xMap.oldDefaultPins.CollectionChanged -= DefaultPins_CollectionChanged;
+				xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
+			}
 		}
 
 		void Pins_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -595,7 +600,10 @@ namespace Mapbox.iOS
 			xMap.currentMapCenter = nMap.CenterCoordinate.toFormsPosition();
 			xMap.regionChanged();
 
-			xMap.cameraIdled(new Bounds(nMap.VisibleCoordinateBounds.sw.toFormsPosition(), nMap.VisibleCoordinateBounds.ne.toFormsPosition(), nMap.CenterCoordinate.toFormsPosition()));
+			xMap.cameraIdled(new Bounds(
+				nMap.VisibleCoordinateBounds.sw.toFormsPosition(),
+				nMap.VisibleCoordinateBounds.ne.toFormsPosition(),
+				nMap.CenterCoordinate.toFormsPosition()));
 		}
 
 		public void updateMapPerspective(ICameraPerspective cameraPerspective)

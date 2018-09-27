@@ -8,6 +8,7 @@ namespace MapBox.Models
 
 		public Position(double latitude, double longitude) : this()
 		{
+			// This is a clamp latlng, does not permit invalid values
 			this.latitude = Math.Min(Math.Max(latitude, -90.0), 90.0);
 			this.longitude = Math.Min(Math.Max(longitude, -180.0), 180.0);
 		}

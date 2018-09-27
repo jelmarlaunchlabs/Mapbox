@@ -163,8 +163,7 @@ namespace MapBox.Android
 				addAllPins();
 
 				// Then subscribe to pins added
-				if (xMap.pins != null)
-				{
+				if (xMap.pins != null) {
 					xMap.pins.CollectionChanged += Pins_CollectionChanged;
 					xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
 				}
@@ -230,8 +229,8 @@ namespace MapBox.Android
 				foreach (var route in xMap.oldRoutes)
 					route.PropertyChanged -= Route_PropertyChanged;
 				xMap.oldRoutes.CollectionChanged -= Routes_CollectionChanged;
-				xMap.routes.CollectionChanged += Routes_CollectionChanged;
 			}
+			xMap.routes.CollectionChanged += Routes_CollectionChanged;
 
 			// Subscribe new routes
 			foreach (var route in xMap.routes)
@@ -374,8 +373,8 @@ namespace MapBox.Android
 				foreach (var pin in xMap.oldPins)
 					pin.PropertyChanged -= Pin_PropertyChanged;
 				xMap.oldPins.CollectionChanged -= Pins_CollectionChanged;
-				xMap.pins.CollectionChanged += Pins_CollectionChanged;
 			}
+			xMap.pins.CollectionChanged += Pins_CollectionChanged;
 
 			// Subcribe each new pin to change monitoring
 			foreach (var pin in xMap.pins)
@@ -513,6 +512,11 @@ namespace MapBox.Android
 				removeAllPins();
 			else if (e.PropertyName == XMapbox.Map.routesProperty.PropertyName)
 				removeAllRoutes();
+			if (e.PropertyName == Map.DefaultPinsProperty.PropertyName) {
+				if (xMap.oldDefaultPins != null)
+					xMap.oldDefaultPins.CollectionChanged -= DefaultPins_CollectionChanged;
+				xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
+			}
 		}
 
 		void Pins_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -603,7 +607,10 @@ namespace MapBox.Android
 			xMap.currentMapCenter = nMap.CameraPosition.Target.toFormsPostion();
 			xMap.regionChanged();
 
-			xMap.cameraIdled(new Bounds(nMap.Projection.VisibleRegion.NearLeft.toFormsPostion(), nMap.Projection.VisibleRegion.FarRight.toFormsPostion(), nMap.CameraPosition.Target.toFormsPostion()));
+			xMap.cameraIdled(new Bounds(
+				nMap.Projection.VisibleRegion.NearLeft.toFormsPostion(),
+				nMap.Projection.VisibleRegion.FarRight.toFormsPostion(),
+				nMap.CameraPosition.Target.toFormsPostion()));
 		}
 
 		public void updateMapPerspective(ICameraPerspective cameraPerspective)
