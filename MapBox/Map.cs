@@ -77,7 +77,7 @@ namespace MapBox
 			default(double),
 			BindingMode.OneWayToSource);
 		/// <summary>
-		/// Max zoom level is 22 (the closest to the ground), OneWayToSource binding only
+		/// Max zoom level is 22, 25 on iOS (the closest to the ground), OneWayToSource binding only
 		/// </summary>
 		/// <value>The current zoom level.</value>
 		public double currentZoomLevel {

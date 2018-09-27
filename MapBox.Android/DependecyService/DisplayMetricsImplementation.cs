@@ -1,6 +1,10 @@
 ﻿using System;
 using MapBox.Abstractions;
+using MapBox.Android.DependecyService;
+using Xamarin.Forms;
 using Droid = Android;
+
+[assembly: Dependency(typeof(DisplayMetricsImplementation))]
 namespace MapBox.Android.DependecyService
 {
 	public class DisplayMetricsImplementation : IDisplayMetrics

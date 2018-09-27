@@ -4,6 +4,7 @@ using System.Linq;
 using CoreLocation;
 using Foundation;
 using MapBox;
+using MapBox.Helpers;
 
 namespace Mapbox.iOS.Extensions
 {
@@ -53,6 +54,7 @@ namespace Mapbox.iOS.Extensions
 		public static List<NSObject> toFeatureList(this IEnumerable<Route> routes)
 		{
 			var features = new List<NSObject>();
+			var nativeScale = DisplayMetricsHelper.instance.nativeScale;
 
 			foreach (var route in routes) {
 				var coordinates = route.points.Select((MapBox.Models.Position arg) => {
@@ -66,8 +68,8 @@ namespace Mapbox.iOS.Extensions
 					new object[]{
 						route.borderLineColor,
 						route.lineColor,
-						(route.borderLineWidth * 2 + route.lineWidth),
-						route.lineWidth
+						(route.borderLineWidth * 2 + route.lineWidth) * nativeScale,
+						route.lineWidth * nativeScale
 					},
 					new object[]{
 						MapboxRenderer.border_line_color_key,
