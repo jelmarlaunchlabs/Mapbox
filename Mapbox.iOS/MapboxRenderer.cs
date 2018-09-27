@@ -537,28 +537,6 @@ namespace Mapbox.iOS
 				}
 			});
 		}
-
-		public void moveCamera()
-		{
-			nMap.AddAnnotation(new MGLPointAnnotation() { Coordinate = new CLLocationCoordinate2D(10, 123) });
-			nMap.AddAnnotation(new MGLPointAnnotation() { Coordinate = new CLLocationCoordinate2D(11, 124) });
-			nMap.AddAnnotation(new MGLPointAnnotation() { Coordinate = new CLLocationCoordinate2D(12, 125) });
-			nMap.AddAnnotation(new MGLPointAnnotation() { Coordinate = new CLLocationCoordinate2D(13, 126) });
-
-			var x = MGLShapeCollection.ShapeCollectionWithShapes(new MGLShape[] {
-				new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(10,123)},
-				new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(11,124)},
-				new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(12,125)},
-				new MGLPointFeature{Coordinate = new CLLocationCoordinate2D(13,126)}
-			});
-
-			var c = nMap.CameraThatFitsShape(x, 0, new UIEdgeInsets(0, 0, 0, 0));
-			nMap.SetCamera(c, false);
-
-
-			//nMap.ZoomLevel = 10;
-			//nMap.CenterCoordinate = new CLLocationCoordinate2D(10, 123);
-		}
 		#endregion
 
 		[Export("mapView:regionDidChangeAnimated:")]

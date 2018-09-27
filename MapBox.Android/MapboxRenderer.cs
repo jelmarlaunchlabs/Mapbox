@@ -544,29 +544,6 @@ namespace MapBox.Android
 			if (features.Any() && xMap.pinClickedCommand != null)
 				xMap.pinClickedCommand.Execute(null);
 		}
-
-		public void moveCamera()
-		{
-			//nMap.MoveCamera(CameraUpdateFactory.NewLatLngZoom(new LatLng(10, 123), 1));
-
-			nMap.AddMarker(new MarkerOptions().SetPosition(new LatLng(10,123)));
-			nMap.AddMarker(new MarkerOptions().SetPosition(new LatLng(11,124)));
-			nMap.AddMarker(new MarkerOptions().SetPosition(new LatLng(12,125)));
-			nMap.AddMarker(new MarkerOptions().SetPosition(new LatLng(13,126)));
-
-			var x = nMap.GetCameraForGeometry(
-				Com.Mapbox.Geojson.GeometryCollection.FromGeometries(
-					new List<IGeometry>{
-						Com.Mapbox.Geojson.Point.FromLngLat(123,10),
-						Com.Mapbox.Geojson.Point.FromLngLat(124,11),
-						Com.Mapbox.Geojson.Point.FromLngLat(125,12),
-						Com.Mapbox.Geojson.Point.FromLngLat(126,13)
-					}),new int[]{500,50,50,500}); // left, top, right, bottom
-			nMap.MoveCamera(CameraUpdateFactory.NewCameraPosition(x));
-
-			//nMap.GetCameraForLatLngBounds(
-				//new LatLngBounds.Builder().Include(new LatLng(10, 123)).);
-		}
 		#endregion
 
 		void NMap_CameraIdle(object sender, EventArgs e)

@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using Com.Mapbox.Geojson;
 using System.Linq;
 using System.Collections.Generic;
+using MapBox.Helpers;
 
 namespace MapBox.Android.Extensions
 {
@@ -42,6 +43,7 @@ namespace MapBox.Android.Extensions
 		public static List<Feature> toFeatureList(this IEnumerable<Route> routes)
 		{
 			var features = new List<Feature>();
+			var nativeScale = DisplayMetricsHelper.instance.nativeScale;
 
 			foreach (var route in routes) {
 				var list = route.points.Select((Models.Position arg) => {
@@ -53,8 +55,8 @@ namespace MapBox.Android.Extensions
 				var feature = Feature.FromGeometry(lineString);
 				feature.AddStringProperty(MapboxRenderer.border_line_color_key, route.borderLineColor);
 				feature.AddStringProperty(MapboxRenderer.line_color_key, route.lineColor);
-				feature.AddNumberProperty(MapboxRenderer.border_line_width_key, (Java.Lang.Number)(route.borderLineWidth * 2 + route.lineWidth));
-				feature.AddNumberProperty(MapboxRenderer.line_width_key, (Java.Lang.Number)route.lineWidth);
+				feature.AddNumberProperty(MapboxRenderer.border_line_width_key, (Java.Lang.Number)((route.borderLineWidth * 2 + route.lineWidth) * nativeScale));
+				feature.AddNumberProperty(MapboxRenderer.line_width_key, (Java.Lang.Number)(route.lineWidth * nativeScale));
 
 				features.Add(feature);
 			}

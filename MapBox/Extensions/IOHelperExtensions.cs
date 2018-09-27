@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Reflection;
+using MapBox.Helpers;
 
 namespace MapBox.Extensions
 {
@@ -25,6 +26,7 @@ namespace MapBox.Extensions
 		public static Stream getRawStremFromEmbeddedResource(this string fileName, Assembly assembly, double width, double height)
 		{
 			byte[] buffer = null;
+			var nativeScale = DisplayMetricsHelper.instance.nativeScale;
 			var address = $"{assembly.GetName().Name}.{fileName.Trim()}";
 			using (var stream = assembly.GetManifestResourceStream(address)) {
 				if (stream == null)
@@ -32,7 +34,7 @@ namespace MapBox.Extensions
 				buffer = new byte[stream.Length];
 				stream.Read(buffer, 0, (int)stream.Length);
 				using (var editableImage = Plugin.ImageEdit.CrossImageEdit.Current.CreateImage(buffer)) {
-					var modified = editableImage.Resize(((int)width), ((int)height)).ToPng();
+					var modified = editableImage.Resize((int)(width * nativeScale), (int)(height * nativeScale)).ToPng();
 					return new MemoryStream(modified);
 				}
 			}

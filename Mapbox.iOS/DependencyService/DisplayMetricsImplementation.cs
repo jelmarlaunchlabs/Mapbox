@@ -1,7 +1,10 @@
 ﻿using System;
+using Mapbox.iOS.DependencyService;
 using MapBox.Abstractions;
 using UIKit;
+using Xamarin.Forms;
 
+[assembly: Dependency(typeof(DisplayMetricsImplementation))]
 namespace Mapbox.iOS.DependencyService
 {
 	public class DisplayMetricsImplementation : IDisplayMetrics

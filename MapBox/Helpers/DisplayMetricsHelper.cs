@@ -1,4 +1,7 @@
 ﻿using System;
+using MapBox.Abstractions;
+using Xamarin.Forms;
+
 namespace MapBox.Helpers
 {
 	public class DisplayMetricsHelper
@@ -12,18 +15,18 @@ namespace MapBox.Helpers
 			}
 		}
 
-		public double nativeScale { get; set; }
-		public double screenWidth { get; set; }
-		public double screenHeight { get; set; }
-		public double screenScale {
-			get {
-				return screenWidth / 320.0f;
-			}
-		}
+		public double nativeScale { get; }
+		public double screenWidth { get; }
+		public double screenHeight { get; }
+		public double screenScale { get; }
 
 		private DisplayMetricsHelper()
 		{
-			// Wait.... don't use me
+			var dependency = DependencyService.Get<IDisplayMetrics>();
+			nativeScale = dependency.getNativeScale();
+			screenWidth = dependency.getWidth();
+			screenHeight = dependency.getHeight();
+			screenScale = screenWidth / 320.0f;
 		}
 	}
 }
