@@ -119,14 +119,14 @@ namespace MapBox.Android
 				Id = GenerateViewId()
 			};
 
-			SetNativeControl(view);
-
 			fragment = new MapViewFragment();
 
 			activity.SupportFragmentManager.BeginTransaction()
 					.Replace(view.Id, fragment)
 					.CommitAllowingStateLoss();
 			fragment.GetMapAsync(this);
+
+			SetNativeControl(view);
 		}
 
 		public void OnMapReady(MapboxMap mapBox)
@@ -138,12 +138,16 @@ namespace MapBox.Android
 			nMap.AddOnMapClickListener(this);
 			nMap.CameraIdle += NMap_CameraIdle;
 
-			if (xMap?.initialCameraUpdate != null)
-				updateMapPerspective(xMap.initialCameraUpdate);
-
 			// This will make sure the map is FULLY LOADED and not just ready
 			// Because it will not load pins/polylines if the operation is executed immediately
-			Device.StartTimer(TimeSpan.FromMilliseconds(800), () => {
+			Device.StartTimer(TimeSpan.FromMilliseconds(100), () => {
+				// If cross map has not been assigned a value yet the retry initializations in the next x millisecond
+				if (xMap == null)
+					return true;
+
+				if (xMap.initialCameraUpdate != null)
+					updateMapPerspective(xMap.initialCameraUpdate);
+
 				// Initialize route first so that it will be the first in the layer list z-index = 0
 				initializeRoutesLayer();
 				addAllRoutes();
@@ -214,9 +218,12 @@ namespace MapBox.Android
 			routeSource.SetGeoJson(xMap.routes.toFeatureCollection());
 
 			// Unsubscribe all routes
-			if (xMap.oldRoutes != null)
+			if (xMap.oldRoutes != null) {
 				foreach (var route in xMap.oldRoutes)
 					route.PropertyChanged -= Route_PropertyChanged;
+				xMap.oldRoutes.CollectionChanged -= Routes_CollectionChanged;
+				xMap.routes.CollectionChanged += Routes_CollectionChanged;
+			}
 
 			// Subscribe new routes
 			foreach (var route in xMap.routes)
@@ -355,9 +362,12 @@ namespace MapBox.Android
 			normalPinsSource.SetGeoJson(normalFeatureCollection.toFeatureCollection());
 
 			// Usubscribe each pin to change monitoring
-			if (xMap.oldPins != null)
+			if (xMap.oldPins != null) {
 				foreach (var pin in xMap.oldPins)
 					pin.PropertyChanged -= Pin_PropertyChanged;
+				xMap.oldPins.CollectionChanged -= Pins_CollectionChanged;
+				xMap.pins.CollectionChanged += Pins_CollectionChanged;
+			}
 
 			// Subcribe each new pin to change monitoring
 			foreach (var pin in xMap.pins)

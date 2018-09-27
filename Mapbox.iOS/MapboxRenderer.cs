@@ -183,9 +183,12 @@ namespace Mapbox.iOS
 			routeSource.Shape = xMap.routes.toShapeCollectionFeature();
 
 			// Unsubscribe all routes
-			if (xMap.oldRoutes != null)
+			if (xMap.oldRoutes != null) {
 				foreach (var route in xMap.oldRoutes)
 					route.PropertyChanged -= Route_PropertyChanged;
+				xMap.oldRoutes.CollectionChanged -= Routes_CollectionChanged;
+				xMap.routes.CollectionChanged += Routes_CollectionChanged;
+			}
 
 			// Subscribe new routes
 			foreach (var route in xMap.routes)
@@ -329,9 +332,12 @@ namespace Mapbox.iOS
 			normalPinsSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(normalFeatureCollection.toShapeSourceArray());
 
 			// Usubscribe each pin to change monitoring
-			if (xMap.oldPins != null)
-				foreach (var pin in xMap.oldPins) 
+			if (xMap.oldPins != null) {
+				foreach (var pin in xMap.oldPins)
 					pin.PropertyChanged -= Pin_PropertyChanged;
+				xMap.oldPins.CollectionChanged -= Pins_CollectionChanged;
+				xMap.pins.CollectionChanged += Pins_CollectionChanged;
+			}
 
 			// Subcribe each new pin to change monitoring
 			foreach (var pin in xMap.pins)
