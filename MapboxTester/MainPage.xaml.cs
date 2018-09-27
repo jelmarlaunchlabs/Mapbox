@@ -11,10 +11,10 @@ using Xamarin.Forms;
 
 namespace MapboxTester
 {
-    public partial class MainPage : ContentPage
-    {
-        public MainPage()
-        {
+	public partial class MainPage : ContentPage
+	{
+		public MainPage()
+		{
 			InitializeComponent();
 
 			map.pins.Add(new Pin {
@@ -226,18 +226,58 @@ namespace MapboxTester
 			////				return false;
 			////			});
 
-			////			//// Change location of certain pin
-			////			//Device.StartTimer(TimeSpan.FromSeconds(10), () => {
-			////			//	map.pins[1].position = new Position(-5, -5);
-			////			//	map.pins[1].heading = 225;
-			////			//	return false;
-			////			//});
-			////			return false;
-			////		});
-			////		return false;
-			////	});
-			////	return false;
-			////});
+			//			//// Change location of certain pin
+			//			//Device.StartTimer(TimeSpan.FromSeconds(10), () => {
+			//			//	map.pins[1].position = new Position(-5, -5);
+			//			//	map.pins[1].heading = 225;
+			//			//	return false;
+			//			//});
+			//			return false;
+			//		});
+			//		return false;
+			//	});
+			//	return false;
+			//});
+
+			map.CameraMoveStarted += Map_CameraMoveStarted;
+			map.CameraMoving += Map_CameraMoving;
+			map.CameraIdled += Map_CameraIdled;
+			map.MapClicked += Map_MapClicked;
+
+			map.DefaultPins = new ObservableCollection<DefaultPin>();
 		}
-    }
+
+		void Map_CameraMoveStarted(object sender, EventArgs e)
+		{
+			Console.WriteLine("Camera Move Started");
+			mapAction.Text = "Camera Move Started";
+
+			map.DefaultPins.Clear();
+		}
+
+		void Map_CameraMoving(object sender, EventArgs e)
+		{
+			Console.WriteLine("Camera Moving");
+			mapAction.Text = "Camera Moving";
+		}
+
+		void Map_CameraIdled(object sender, Bounds e)
+		{
+			Console.WriteLine("Camera Idled - NorthEast: " + e.NorthEast.latitude + " - " + e.NorthEast.longitude);
+			Console.WriteLine("Camera Idled - NorthWest: " + e.NorthWest.latitude + " - " + e.NorthWest.longitude);
+			Console.WriteLine("Camera Idled - SouthEast: " + e.SouthEast.latitude + " - " + e.SouthEast.longitude);
+			Console.WriteLine("Camera Idled - SouthWest: " + e.SouthWest.latitude + " - " + e.SouthWest.longitude);
+
+			Console.WriteLine("Camera Idled - Center: " + e.Center.latitude + " - " + e.Center.longitude);
+			mapAction.Text = "Camera Idled - Center: " + e.Center.latitude + " - " + e.Center.longitude;
+		}
+
+		void Map_MapClicked(object sender, Position e)
+		{
+			Console.WriteLine("Map Clicked: " + e.latitude + " - " + e.longitude);
+			mapAction.Text = "Map Clicked: " + e.latitude + " - " + e.longitude;
+
+			map.DefaultPins.Add(new DefaultPin() { Title = "Map Clicked", Position = e });
+		}
+	}
 }

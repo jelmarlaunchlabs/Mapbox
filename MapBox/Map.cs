@@ -14,6 +14,11 @@ namespace MapBox
     {
 		public event EventHandler regionChangedIdle;
 
+		public event EventHandler CameraMoveStarted;
+		public event EventHandler CameraMoving;
+		public event EventHandler<Bounds> CameraIdled;
+		public event EventHandler<Position> MapClicked;
+
 		#region Internal properties
 		internal Assembly callerAssembly { get; set; }
 		internal ObservableCollection<Pin> oldPins { get; set; }
@@ -93,6 +98,12 @@ namespace MapBox
 			get { return (Position)GetValue(currentMapCenterProperty); }
 			set { SetValue(currentMapCenterProperty, value); }
 		}
+
+		public static readonly BindableProperty DefaultPinsProperty = BindableProperty.Create(nameof(DefaultPins), typeof(ObservableCollection<DefaultPin>), typeof(Map), default(ObservableCollection<DefaultPin>), BindingMode.OneWay);
+		public ObservableCollection<DefaultPin> DefaultPins {
+			get { return (ObservableCollection<DefaultPin>)GetValue(DefaultPinsProperty); }
+			set { SetValue(DefaultPinsProperty, value); }
+		}
 		#endregion
 
 		public ICameraPerspective initialCameraUpdate { get; set; }
@@ -116,6 +127,26 @@ namespace MapBox
 		internal void regionChanged()
 		{
 			regionChangedIdle?.Invoke(this, new EventArgs());
+		}
+
+		internal void cameraMoveStarted()
+		{
+			CameraMoveStarted?.Invoke(this, new EventArgs());
+		}
+
+		internal void cameraMoving()
+		{
+			CameraMoving?.Invoke(this, new EventArgs());
+		}
+
+		internal void cameraIdled(Bounds bounds)
+		{
+			CameraIdled?.Invoke(this, bounds);
+		}
+
+		internal void mapClicked(Position position)
+		{
+			MapClicked?.Invoke(this, position);
 		}
 		#endregion
 	}
