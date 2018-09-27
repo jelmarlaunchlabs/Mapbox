@@ -85,7 +85,10 @@ namespace MapBox.Android
 
 				// Unsubscribe to changes in the collection first
 				if (map.pins != null)
+				{
 					map.pins.CollectionChanged -= Pins_CollectionChanged;
+					map.DefaultPins.CollectionChanged -= DefaultPins_CollectionChanged;
+				}
 
 				// Unsubscribe to changes in the collection first
 				if (map.routes != null)
@@ -136,6 +139,8 @@ namespace MapBox.Android
 			nMap.UiSettings.CompassEnabled = false;
 			nMap.AddOnMapClickListener(this);
 			nMap.CameraIdle += NMap_CameraIdle;
+			nMap.CameraMoveStarted += NMap_CameraMoveStarted;
+			nMap.CameraMove += NMap_CameraMove;
 
 			if (xMap?.initialCameraUpdate != null)
 				updateMapPerspective(xMap.initialCameraUpdate);
@@ -154,7 +159,10 @@ namespace MapBox.Android
 
 				// Then subscribe to pins added
 				if (xMap.pins != null)
+				{
 					xMap.pins.CollectionChanged += Pins_CollectionChanged;
+					xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
+				}
 
 				if(xMap.routes!=null)
 					xMap.routes.CollectionChanged += Routes_CollectionChanged;
@@ -496,6 +504,28 @@ namespace MapBox.Android
 			if (e.PropertyName == Pin.positionProperty.PropertyName)
 				animateLocationChange(pin);
 		}
+
+		void DefaultPins_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			switch(e.Action)
+			{
+				case NotifyCollectionChangedAction.Add:
+					foreach(DefaultPin pin in e.NewItems)
+					{
+						nMap.AddMarker(new MarkerOptions().SetPosition(pin.Position.toNativeLatLng()).SetTitle(pin.Title));
+					}
+					break;
+				case NotifyCollectionChangedAction.Remove:
+					//nMap.RemoveMarker();
+					break;
+				case NotifyCollectionChangedAction.Reset:
+					foreach(Marker marker in nMap.Markers.ToList())
+					{
+						nMap.RemoveMarker(marker);
+					}
+					break;
+			}
+		}
 		#endregion
 
 		#region Map functions
@@ -511,7 +541,13 @@ namespace MapBox.Android
 
 			// TODO: Return the actual pin clicked
 			if (features.Any() && xMap.pinClickedCommand != null)
+			{
 				xMap.pinClickedCommand.Execute(null);
+			}
+			else
+			{
+				xMap.mapClicked(point.toFormsPostion());
+			}	
 		}
 
 		public void moveCamera()
@@ -538,11 +574,23 @@ namespace MapBox.Android
 		}
 		#endregion
 
+		void NMap_CameraMoveStarted(object sender, MapboxMap.CameraMoveStartedEventArgs e)
+		{
+			xMap.cameraMoveStarted();
+		}
+
+		void NMap_CameraMove(object sender, EventArgs e)
+		{
+			xMap.cameraMoving();
+		}
+
 		void NMap_CameraIdle(object sender, EventArgs e)
 		{
 			xMap.currentZoomLevel = nMap.CameraPosition.Zoom;
 			xMap.currentMapCenter = nMap.CameraPosition.Target.toFormsPostion();
 			xMap.regionChanged();
+
+			xMap.cameraIdled(new Bounds(nMap.Projection.VisibleRegion.NearLeft.toFormsPostion(), nMap.Projection.VisibleRegion.FarRight.toFormsPostion(), nMap.CameraPosition.Target.toFormsPostion()));
 		}
 
 		public void updateMapPerspective(ICameraPerspective cameraPerspective)

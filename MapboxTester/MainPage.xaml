@@ -4,7 +4,10 @@
              xmlns:local="clr-namespace:MapboxTester"
              xmlns:mapbox="clr-namespace:MapBox;assembly=MapBox"
              x:Class="MapboxTester.MainPage">
-    <mapbox:Map x:Name="map"/>
-    <!--<mapbox:TestImage HorizontalOptions="Center"
+    <Grid>
+        <mapbox:Map x:Name="map"/>
+        <Label x:Name="mapAction" Text="" TextColor="Red" InputTransparent="true" Margin="0,30,0,0" VerticalOptions="Start" HorizontalOptions="Center"/>
+        <!--<mapbox:TestImage HorizontalOptions="Center"
                       VerticalOptions="Center"/>-->
+    </Grid>
 </ContentPage>
