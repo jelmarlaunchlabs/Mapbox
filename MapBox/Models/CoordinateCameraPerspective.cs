@@ -12,6 +12,7 @@ namespace MapBox.Models
 		{
 			this.position = position;
 			this.isAnimated = isAnimated;
+			this.isAnimated = isAnimated;
 		}
 	}
 }

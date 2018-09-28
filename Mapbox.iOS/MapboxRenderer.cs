@@ -425,10 +425,10 @@ namespace Mapbox.iOS
 					MapBox.Extensions.MapExtensions.animatePin(
 						(double d) => {
 							System.Threading.Tasks.Task.Run(() => {
-								var movablePinCount = pinsWithSimilarKey.Count();
+								var visibleMovablePinCount = pinsWithSimilarKey.Count(p => p.isVisible);
 								var features = new List<NSObject>();
 
-								for (int i = 0; i < movablePinCount; i++) {
+								for (int i = 0; i < visibleMovablePinCount; i++) {
 									var p = pinsWithSimilarKey[i];
 									Position theCurrentAnimationJump = p.position;
 									double theCurrentHeading = p.heading;
@@ -527,8 +527,9 @@ namespace Mapbox.iOS
 			} else if (e.PropertyName == Pin.imageProperty.PropertyName)
 				addPin(pin); // This is really addPin because it's uniqe implementation allows it to refresh the entire layer where this pin should belong.
 			else if (e.PropertyName == Pin.headingProperty.PropertyName ||
-				   e.PropertyName == Pin.iconOffsetProperty.PropertyName ||
-				   e.PropertyName == Pin.imageScaleFactorProperty.PropertyName)
+				     e.PropertyName == Pin.iconOffsetProperty.PropertyName ||
+				     e.PropertyName == Pin.imageScaleFactorProperty.PropertyName ||
+			         e.PropertyName == Pin.isVisibleProperty.PropertyName)
 				updatePins(pin); // This is called instead of addPins because the property that has changed is in the bindable GeoJsonSource
 		}
 
@@ -622,8 +623,8 @@ namespace Mapbox.iOS
 				return;
 
 			if (cameraPerspective is CenterAndZoomCameraPerspective centerAndZoom) {
-				nMap.ZoomLevel = centerAndZoom.zoomLevel;
-				nMap.CenterCoordinate = centerAndZoom.position.toNativeCLLocationCoordinate2D();
+				var coordinate = centerAndZoom.position.toNativeCLLocationCoordinate2D();
+				nMap.SetCenterCoordinate(coordinate, centerAndZoom.zoomLevel, centerAndZoom.isAnimated);
 			} else if (cameraPerspective is CoordinatesAndPaddingCameraPerspective span) {
 				var shapes = span.positions.Select((Position p) => new MGLPointFeature { Coordinate = new CLLocationCoordinate2D(p.latitude, p.longitude) });
 				var shapeCollecton = MGLShapeCollection.ShapeCollectionWithShapes(shapes.ToArray());
@@ -634,7 +635,7 @@ namespace Mapbox.iOS
 									 (System.nfloat)span.padding.Left,
 									 (System.nfloat)span.padding.Bottom,
 									 (System.nfloat)span.padding.Right));
-				nMap.SetCamera(camera, false);
+				nMap.SetCamera(camera, span.isAnimated);
 			} else if(cameraPerspective is CoordinateCameraPerspective center){
 				nMap.SetCenterCoordinate(center.position.toNativeCLLocationCoordinate2D(), center.isAnimated);
 			}
