@@ -6,8 +6,10 @@
              x:Class="MapboxTester.MainPage">
     <Grid>
         <mapbox:Map x:Name="map"/>
-        <Label x:Name="mapAction" Text="" TextColor="Red" InputTransparent="true" Margin="0,30,0,0" VerticalOptions="Start" HorizontalOptions="Center"/>
+        <Label x:Name="mapAction" Text="" FontSize="12" TextColor="Red" VerticalTextAlignment="Center" HorizontalTextAlignment="Center" InputTransparent="true" Margin="0,30,0,0" VerticalOptions="Start" HorizontalOptions="Center"/>
         <!--<mapbox:TestImage HorizontalOptions="Center"
                       VerticalOptions="Center"/>-->
+        <Button Text="Move Camera with Animated" Clicked="MoveCamera_Clicked" ClassId="animated" Margin="0,0,0,90" HeightRequest="40" WidthRequest="280" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>
+        <Button Text="Move Camera without Animation" Clicked="MoveCamera_Clicked" ClassId="notAnimated" Margin="0,0,0,30" HeightRequest="40" WidthRequest="280" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>
     </Grid>
 </ContentPage>

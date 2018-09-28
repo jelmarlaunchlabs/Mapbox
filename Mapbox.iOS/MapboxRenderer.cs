@@ -626,6 +626,8 @@ namespace Mapbox.iOS
 									 (System.nfloat)span.padding.Bottom,
 									 (System.nfloat)span.padding.Right));
 				nMap.SetCamera(camera, false);
+			} else if(cameraPerspective is CoordinateCameraPerspective center){
+				nMap.SetCenterCoordinate(center.position.toNativeCLLocationCoordinate2D(), center.isAnimated);
 			}
 		}
 	}

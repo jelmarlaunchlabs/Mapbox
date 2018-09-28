@@ -279,5 +279,10 @@ namespace MapboxTester
 
 			map.DefaultPins.Add(new DefaultPin() { Title = "Map Clicked", Position = e });
 		}
+
+		void MoveCamera_Clicked(object sender, System.EventArgs e)
+		{
+			map.moveMapToRegion(CameraPerspectiveFactory.fromCoordinates(new Position(10.336712, 123.929958), (sender as Button).ClassId.Equals("animated")));
+		}
 	}
 }

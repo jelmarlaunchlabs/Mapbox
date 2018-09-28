@@ -9,6 +9,17 @@ namespace MapBox.Factory
 	public static class CameraPerspectiveFactory
 	{
 		/// <summary>
+		/// Creates a camera perspective based on a center position.
+		/// </summary>
+		/// <returns>The CoordinateCameraPerspective instance.</returns>
+		/// <param name="position">The center positon.</param>
+		/// <param name="isAnimated">Animate Camera - Default (true).</param>
+		public static ICameraPerspective fromCoordinates(Position position, bool isAnimated = true)
+		{
+			return new CoordinateCameraPerspective(position, isAnimated);
+		}
+
+		/// <summary>
 		/// Creates a camera perspective based on a center position and a zoom level.
 		/// </summary>
 		/// <returns>The CenterAndZoomCameraPerspective instance.</returns>
