@@ -406,8 +406,8 @@ namespace Mapbox.iOS
 		{
 			#region Simultaneous pin update
 			System.Threading.Tasks.Task.Run(async () => {
-				// Only animate flat pins
-				if (!pin.IsCenterAndFlat || isPinAnimating)
+				// If there exist a pin that caused this update
+				if (isPinAnimating)
 					return;
 
 				// Wait for pin position assignment in the same call
@@ -519,8 +519,17 @@ namespace Mapbox.iOS
 		void Pin_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
 		{
 			var pin = (Pin)sender;
-			if (e.PropertyName == Pin.positionProperty.PropertyName)
-				animateLocationChange(pin);
+			if (e.PropertyName == Pin.positionProperty.PropertyName) {
+				if (pin.IsCenterAndFlat)
+					animateLocationChange(pin);
+				else
+					updatePins(pin);
+			} else if (e.PropertyName == Pin.imageProperty.PropertyName)
+				addPin(pin); // This is really addPin because it's uniqe implementation allows it to refresh the entire layer where this pin should belong.
+			else if (e.PropertyName == Pin.headingProperty.PropertyName ||
+				   e.PropertyName == Pin.iconOffsetProperty.PropertyName ||
+				   e.PropertyName == Pin.imageScaleFactorProperty.PropertyName)
+				updatePins(pin); // This is called instead of addPins because the property that has changed is in the bindable GeoJsonSource
 		}
 
 		void DefaultPins_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -626,6 +635,8 @@ namespace Mapbox.iOS
 									 (System.nfloat)span.padding.Bottom,
 									 (System.nfloat)span.padding.Right));
 				nMap.SetCamera(camera, false);
+			} else if(cameraPerspective is CoordinateCameraPerspective center){
+				nMap.SetCenterCoordinate(center.position.toNativeCLLocationCoordinate2D(), center.isAnimated);
 			}
 		}
 	}

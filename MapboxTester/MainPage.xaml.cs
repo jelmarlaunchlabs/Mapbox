@@ -19,7 +19,7 @@ namespace MapboxTester
 
 			map.pins.Add(new Pin {
 				image = "Resources.car.png",
-				IsCenterAndFlat = true,
+				IsCenterAndFlat = false,
 				heading = 0,
 				position = new Position(0.5, -1)
 			});
@@ -42,17 +42,22 @@ namespace MapboxTester
 				position = new Position(-1, -1)
 			});
 
-			Device.StartTimer(TimeSpan.FromSeconds(8), () => {
-				map.moveMapToRegion(CameraPerspectiveFactory.fromCoordinatesAndPadding(
-					new List<Position>{
-						map.pins[0].position,
-						map.pins[1].position,
-						map.pins[2].position,
-						map.pins[3].position
-					},
-					new Thickness(50+25, 50+25, 50+25, 50+25)));
+			Device.StartTimer(TimeSpan.FromSeconds(10), () => {
+				map.pins[0].position = new Position(10, 123);
 				return false;
 			});
+
+			//Device.StartTimer(TimeSpan.FromSeconds(8), () => {
+			//	map.moveMapToRegion(CameraPerspectiveFactory.fromCoordinatesAndPadding(
+			//		new List<Position>{
+			//			map.pins[0].position,
+			//			map.pins[1].position,
+			//			map.pins[2].position,
+			//			map.pins[3].position
+			//		},
+			//		new Thickness(50+25, 50+25, 50+25, 50+25)));
+			//	return false;
+			//});
 			////map.initialCameraUpdate = CameraPerspectiveFactory.fromCenterAndZoomLevel(new Position(10.317119, 123.764238), 10);
 			////map.moveMapToRegion(CameraPerspectiveFactory.fromCenterAndZoomLevel(new Position(10.317119, 123.764238), 10));
 			//// Initialize pins
@@ -278,6 +283,11 @@ namespace MapboxTester
 			mapAction.Text = "Map Clicked: " + e.latitude + " - " + e.longitude;
 
 			map.DefaultPins.Add(new DefaultPin() { Title = "Map Clicked", Position = e });
+		}
+
+		void MoveCamera_Clicked(object sender, System.EventArgs e)
+		{
+			map.moveMapToRegion(CameraPerspectiveFactory.fromCoordinates(new Position(10.336712, 123.929958), (sender as Button).ClassId.Equals("animated")));
 		}
 	}
 }
