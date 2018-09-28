@@ -389,6 +389,9 @@ namespace MapBox.Android
 			// Find a source that has the same image as this pin
 			var bitmap = nMap.GetImage(key);
 
+			// Get all pins with the same flat value
+			var pinsWithSimilarKey = xMap.pins.Where((Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat);
+
 			// If there are existing image of the same type the reuse
 			// Note, this is just removePin(Pin), but left this way because there might be a restructure for this in the fututre
 			if (bitmap != null)

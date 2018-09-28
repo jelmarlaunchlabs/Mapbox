@@ -17,37 +17,38 @@ namespace MapboxTester
 		{
 			InitializeComponent();
 
+			map.initialCameraUpdate = CameraPerspectiveFactory.fromCenterAndZoomLevel(new Position(10.336712, 123.929958), 10);
+
 			map.pins.Add(new Pin {
 				image = "Resources.car.png",
 				IsCenterAndFlat = true,
 				heading = 0,
-				position = new Position(0.5, -1)
-			});
-			map.pins.Add(new Pin {
-				image = "Resources.car.png",
-				IsCenterAndFlat = true,
-				isVisible = false,
-				heading = 0,
-				position = new Position(0.5, 1)
+				position = new Position(10.318342, 123.90506)
 			});
 			map.pins.Add(new Pin {
 				image = "Resources.car.png",
 				IsCenterAndFlat = true,
 				heading = 0,
-				position = new Position(-1, 1)
+				position = new Position(10.31581, 123.97906)
 			});
 			map.pins.Add(new Pin {
 				image = "Resources.car.png",
 				IsCenterAndFlat = true,
 				heading = 0,
-				position = new Position(-1, -1)
+				position = new Position(10.304416, 123.91161)
+			});
+			map.pins.Add(new Pin {
+				image = "Resources.car.png",
+				IsCenterAndFlat = true,
+				heading = 0,
+				position = new Position(10.311782, 123.91805)
 			});
 
-			Device.StartTimer(TimeSpan.FromSeconds(10), () => {
-				map.pins[0].isVisible = false;
-				map.pins[1].isVisible = true;
-				return false;
-			});
+			//Device.StartTimer(TimeSpan.FromSeconds(10), () => {
+			//	map.pins[0].isVisible = false;
+			//	map.pins[1].isVisible = true;
+			//	return false;
+			//});
 
 			//Device.StartTimer(TimeSpan.FromSeconds(8), () => {
 			//	map.moveMapToRegion(CameraPerspectiveFactory.fromCoordinatesAndPadding(
@@ -284,12 +285,33 @@ namespace MapboxTester
 			Console.WriteLine("Map Clicked: " + e.latitude + " - " + e.longitude);
 			mapAction.Text = "Map Clicked: " + e.latitude + " - " + e.longitude;
 
-			map.DefaultPins.Add(new DefaultPin() { Title = "Map Clicked", Position = e });
+			//map.DefaultPins.Add(new DefaultPin() { Title = "Map Clicked", Position = e });
+
+			map.pins.FirstOrDefault().position = e;
 		}
 
 		void MoveCamera_Clicked(object sender, System.EventArgs e)
 		{
 			map.moveMapToRegion(CameraPerspectiveFactory.fromCoordinates(new Position(10.336712, 123.929958), (sender as Button).ClassId.Equals("animated")));
+		}
+
+		bool isVisible = true;
+		Random rnd = new Random();
+
+		void Visibility_Clicked(object sender, System.EventArgs e)
+		{
+			isVisible = !isVisible;
+			map.pins.All((arg) => { arg.isVisible = isVisible; return true; });
+		}
+
+		void Heading_Clicked(object sender, System.EventArgs e)
+		{
+			var x = rnd.Next(0, 360);
+			Console.WriteLine("heading pin one: " + x);
+			map.pins[0].heading = x;
+			//map.pins[1].heading = rnd.Next(0, 360);
+			//map.pins[2].heading = rnd.Next(0, 360);
+			//map.pins[3].heading = rnd.Next(0, 360);
 		}
 	}
 }
