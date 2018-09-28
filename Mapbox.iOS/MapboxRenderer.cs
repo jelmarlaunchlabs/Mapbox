@@ -421,11 +421,13 @@ namespace Mapbox.iOS
 				Device.BeginInvokeOnMainThread(() => {
 					var geoJsonSource = (MGLShapeSource)nStyle.SourceWithIdentifier(mapLockedPinsSourceKey);
 
+					var visibleMovablePinCount = pinsWithSimilarKey.Count(p => p.isVisible);
+					var currentHeadingCollection = new double[visibleMovablePinCount];
+
 					// Update the entire frame
 					MapBox.Extensions.MapExtensions.animatePin(
 						(double d) => {
 							System.Threading.Tasks.Task.Run(() => {
-								var visibleMovablePinCount = pinsWithSimilarKey.Count(p => p.isVisible);
 								var features = new List<NSObject>();
 
 								for (int i = 0; i < visibleMovablePinCount; i++) {
@@ -438,8 +440,8 @@ namespace Mapbox.iOS
 									if (pin == p || p.requestForUpdate) {
 										theCurrentAnimationJump = SphericalUtil.interpolate(p.previousPinPosition, p.position, d);
 										theCurrentHeading = SphericalUtil.computeHeading(p.previousPinPosition, p.position);
-										p.heading = theCurrentHeading;
 									}
+									currentHeadingCollection[i] = theCurrentHeading;
 
 									var feature = new MGLPointFeature {
 										Coordinate = new CLLocationCoordinate2D(theCurrentAnimationJump.latitude,
@@ -469,8 +471,10 @@ namespace Mapbox.iOS
 							isPinAnimating = false;
 
 							// Stabilize the pins, at this moment all the pins are updated
-							foreach (var p in pinsWithSimilarKey)
-								p.requestForUpdate = false;
+							for (int i = 0; i < visibleMovablePinCount; i++) {
+								pinsWithSimilarKey[i].requestForUpdate = false;
+								pinsWithSimilarKey[i].heading = currentHeadingCollection[i];
+							}
 						}, 500);
 				});
 			});
