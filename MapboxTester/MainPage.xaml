@@ -11,5 +11,8 @@
                       VerticalOptions="Center"/>-->
         <Button Text="Move Camera with Animated" Clicked="MoveCamera_Clicked" ClassId="animated" Margin="0,0,0,90" HeightRequest="40" WidthRequest="280" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>
         <Button Text="Move Camera without Animation" Clicked="MoveCamera_Clicked" ClassId="notAnimated" Margin="0,0,0,30" HeightRequest="40" WidthRequest="280" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>
+        <Button Text="Download Map" Clicked="DownloadMap_Clicked"/>
+        <Button Text="Load Map" Clicked="loadMap"/>
+        <Button Text="Clear Map" Clicked="clearMap"/>
     </Grid>
 </ContentPage>

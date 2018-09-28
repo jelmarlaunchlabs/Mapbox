@@ -254,6 +254,21 @@ namespace MapboxTester
 			map.DefaultPins = new ObservableCollection<DefaultPin>();
 		}
 
+		void DownloadMap_Clicked(object sender, System.EventArgs e)
+		{
+
+		}
+
+		void loadMap(object sender, System.EventArgs e)
+		{
+			throw new NotImplementedException();
+		}
+
+		void clearMap(object sender, System.EventArgs e)
+		{
+			throw new NotImplementedException();
+		}
+
 		void Map_CameraMoveStarted(object sender, EventArgs e)
 		{
 			Console.WriteLine("Camera Move Started");
