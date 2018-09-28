@@ -53,10 +53,10 @@ namespace Mapbox.iOS
 		private MGLStyle nStyle;
 		private bool isPinAnimating;
 
-		public static void init()
+		public static void init(string accessToken)
         {
-
-        }
+			MGLAccountManager.AccessToken = accessToken;
+		}
 
         protected override void OnElementChanged(ElementChangedEventArgs<Map> e)
         {
