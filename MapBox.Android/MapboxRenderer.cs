@@ -635,6 +635,14 @@ namespace MapBox.Android
 						(int)(span.padding.Bottom * density)
 					});
 				nMap.MoveCamera(CameraUpdateFactory.NewCameraPosition(camera));
+			} else if(cameraPerspective is CoordinateCameraPerspective center){
+				if(center.isAnimated)
+				{
+					nMap.AnimateCamera(CameraUpdateFactory.NewLatLng(center.position.toNativeLatLng()));
+				} else
+				{
+					nMap.MoveCamera(CameraUpdateFactory.NewLatLng(center.position.toNativeLatLng()));
+				}
 			}
 		}
 	}
