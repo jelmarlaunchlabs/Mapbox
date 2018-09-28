@@ -20,6 +20,10 @@ namespace Mapbox.iOS.Extensions
 			var features = new List<NSObject>();
 
 			foreach (var pin in pins) {
+				// Skip if the pin is hidden
+				if (!pin.isVisible)
+					continue;
+
 				var feature = new MGLPointFeature {
 					Coordinate = new CLLocationCoordinate2D(pin.position.latitude, pin.position.longitude)
 				};

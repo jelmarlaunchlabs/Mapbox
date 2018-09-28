@@ -135,6 +135,17 @@ namespace MapBox
 			set { SetValue(iconOffsetProperty, value); }
 		}
 
+		public static readonly BindableProperty isVisibleProperty = BindableProperty.Create(
+			nameof(isVisible),
+			typeof(bool),
+			typeof(Pin),
+			true,
+			BindingMode.OneWay);
+		public bool isVisible {
+			get { return (bool)GetValue(isVisibleProperty); }
+			set { SetValue(isVisibleProperty, value); }
+		}
+
 		internal Position previousPinPosition { get; set; }
 		internal bool hasUpdatedOnce { get; set; }
 		internal bool requestForUpdate { get; set; }

@@ -19,13 +19,14 @@ namespace MapboxTester
 
 			map.pins.Add(new Pin {
 				image = "Resources.car.png",
-				IsCenterAndFlat = false,
+				IsCenterAndFlat = true,
 				heading = 0,
 				position = new Position(0.5, -1)
 			});
 			map.pins.Add(new Pin {
 				image = "Resources.car.png",
 				IsCenterAndFlat = true,
+				isVisible = false,
 				heading = 0,
 				position = new Position(0.5, 1)
 			});
@@ -43,7 +44,8 @@ namespace MapboxTester
 			});
 
 			Device.StartTimer(TimeSpan.FromSeconds(10), () => {
-				map.pins[0].position = new Position(10, 123);
+				map.pins[0].isVisible = false;
+				map.pins[1].isVisible = true;
 				return false;
 			});
 
