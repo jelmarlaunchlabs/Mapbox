@@ -19,6 +19,10 @@ namespace MapBox.Android.Extensions
 			var features = new List<Feature>();
 
 			foreach (var pin in pins) {
+				// Skip if the pin is hidden
+				if (!pin.isVisible)
+					continue;
+
 				var feature = Feature.FromGeometry(
 					Point.FromLngLat(pin.position.longitude,
 									 pin.position.latitude));

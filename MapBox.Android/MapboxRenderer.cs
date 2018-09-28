@@ -438,8 +438,8 @@ namespace MapBox.Android
 		{
 			#region Simultaneous pin update
 			System.Threading.Tasks.Task.Run(async () => {
-				// Only animate flat pins
-				if (!pin.IsCenterAndFlat || isPinAnimating)
+				// If there exist a pin that caused this update
+				if (isPinAnimating)
 					return;
 
 				// Wait for pin position assignment in the same call
@@ -457,10 +457,10 @@ namespace MapBox.Android
 					MapBox.Extensions.MapExtensions.animatePin(
 						(double d) => {
 							System.Threading.Tasks.Task.Run(() => {
-								var movablePinCount = pinsWithSimilarKey.Count();
+								var visibleMovablePinCount = pinsWithSimilarKey.Count(p => p.isVisible);
 								var features = new List<Feature>();
 
-								for (int i = 0; i < movablePinCount; i++) {
+								for (int i = 0; i < visibleMovablePinCount; i++) {
 									var p = pinsWithSimilarKey[i];
 									Position theCurrentAnimationJump = p.position;
 									double theCurrentHeading = p.heading;
@@ -515,7 +515,8 @@ namespace MapBox.Android
 			if (e.PropertyName == Map.DefaultPinsProperty.PropertyName) {
 				if (xMap.oldDefaultPins != null)
 					xMap.oldDefaultPins.CollectionChanged -= DefaultPins_CollectionChanged;
-				xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
+				if (xMap.DefaultPins != null)
+					xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
 			}
 		}
 
@@ -544,8 +545,18 @@ namespace MapBox.Android
 		void Pin_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
 		{
 			var pin = (Pin)sender;
-			if (e.PropertyName == Pin.positionProperty.PropertyName)
-				animateLocationChange(pin);
+			if (e.PropertyName == Pin.positionProperty.PropertyName) {
+				if (pin.IsCenterAndFlat)
+					animateLocationChange(pin);
+				else
+					updatePins(pin);
+			} else if (e.PropertyName == Pin.imageProperty.PropertyName)
+				addPin(pin); // This is really addPin because it's uniqe implementation allows it to refresh the entire layer where this pin should belong.
+			else if (e.PropertyName == Pin.headingProperty.PropertyName ||
+				     e.PropertyName == Pin.iconOffsetProperty.PropertyName ||
+				     e.PropertyName == Pin.imageScaleFactorProperty.PropertyName ||
+					 e.PropertyName == Pin.isVisibleProperty.PropertyName)
+				updatePins(pin); // This is called instead of addPins because the property that has changed is in the bindable GeoJsonSource
 		}
 
 		void DefaultPins_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -619,7 +630,11 @@ namespace MapBox.Android
 				return;
 
 			if (cameraPerspective is CenterAndZoomCameraPerspective centerAndZoom) {
-				nMap.MoveCamera(CameraUpdateFactory.NewLatLngZoom(centerAndZoom.position.toNativeLatLng(), centerAndZoom.zoomLevel));
+				var camera = CameraUpdateFactory.NewLatLngZoom(centerAndZoom.position.toNativeLatLng(), centerAndZoom.zoomLevel);
+				if (centerAndZoom.isAnimated)
+					nMap.AnimateCamera(camera);
+				else
+					nMap.MoveCamera(camera);
 			} else if (cameraPerspective is CoordinatesAndPaddingCameraPerspective span) {
 				var density = Resources.DisplayMetrics.Density;
 				var list = span.positions.Select((Position p) => new LatLng(p.latitude, p.longitude));
@@ -634,7 +649,11 @@ namespace MapBox.Android
 						(int)(span.padding.Right * density),
 						(int)(span.padding.Bottom * density)
 					});
-				nMap.MoveCamera(CameraUpdateFactory.NewCameraPosition(camera));
+
+				if (span.isAnimated)
+					nMap.AnimateCamera(CameraUpdateFactory.NewCameraPosition(camera));
+				else
+					nMap.MoveCamera(CameraUpdateFactory.NewCameraPosition(camera));
 			} else if(cameraPerspective is CoordinateCameraPerspective center){
 				if(center.isAnimated)
 				{
