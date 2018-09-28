@@ -86,10 +86,9 @@ namespace MapBox.Android
 
 				// Unsubscribe to changes in the collection first
 				if (map.pins != null)
-				{
 					map.pins.CollectionChanged -= Pins_CollectionChanged;
+				if (map.DefaultPins != null)
 					map.DefaultPins.CollectionChanged -= DefaultPins_CollectionChanged;
-				}
 
 				// Unsubscribe to changes in the collection first
 				if (map.routes != null)
@@ -163,10 +162,10 @@ namespace MapBox.Android
 				addAllPins();
 
 				// Then subscribe to pins added
-				if (xMap.pins != null) {
+				if (xMap.pins != null)
 					xMap.pins.CollectionChanged += Pins_CollectionChanged;
+				if (xMap.DefaultPins != null)
 					xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
-				}
 
 				if(xMap.routes!=null)
 					xMap.routes.CollectionChanged += Routes_CollectionChanged;
