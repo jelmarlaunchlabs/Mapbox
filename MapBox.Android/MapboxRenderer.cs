@@ -389,6 +389,9 @@ namespace MapBox.Android
 			// Find a source that has the same image as this pin
 			var bitmap = nMap.GetImage(key);
 
+			// Get all pins with the same flat value
+			var pinsWithSimilarKey = xMap.pins.Where((Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat);
+
 			// If there are existing image of the same type the reuse
 			// Note, this is just removePin(Pin), but left this way because there might be a restructure for this in the fututre
 			if (bitmap != null)
@@ -453,11 +456,13 @@ namespace MapBox.Android
 				Device.BeginInvokeOnMainThread(() => {
 					var geoJsonSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
 
+					var visibleMovablePinCount = pinsWithSimilarKey.Count(p => p.isVisible);
+					var currentHeadingCollection = new double[visibleMovablePinCount];
+
 					// Update the entire frame
 					MapBox.Extensions.MapExtensions.animatePin(
 						(double d) => {
 							System.Threading.Tasks.Task.Run(() => {
-								var visibleMovablePinCount = pinsWithSimilarKey.Count(p => p.isVisible);
 								var features = new List<Feature>();
 
 								for (int i = 0; i < visibleMovablePinCount; i++) {
@@ -470,8 +475,9 @@ namespace MapBox.Android
 									if (pin == p || p.requestForUpdate) {
 										theCurrentAnimationJump = SphericalUtil.interpolate(p.previousPinPosition, p.position, d);
 										theCurrentHeading = SphericalUtil.computeHeading(p.previousPinPosition, p.position);
-										p.heading = theCurrentHeading;
 									}
+									currentHeadingCollection[i] = theCurrentHeading;
+
 
 									var feature = Feature.FromGeometry(
 										Com.Mapbox.Geojson.Point.FromLngLat(theCurrentAnimationJump.longitude,
@@ -495,8 +501,10 @@ namespace MapBox.Android
 							isPinAnimating = false;
 
 							// Stabilize the pins, at this moment all the pins are updated
-							foreach (var p in pinsWithSimilarKey)
-								p.requestForUpdate = false;
+							for (int i = 0; i < visibleMovablePinCount; i++) {
+								pinsWithSimilarKey[i].requestForUpdate = false;
+								pinsWithSimilarKey[i].heading = currentHeadingCollection[i];
+							}
 						}, 500);
 				});
 			});
