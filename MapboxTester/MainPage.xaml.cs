@@ -22,25 +22,25 @@ namespace MapboxTester
 			map.pins.Add(new Pin {
 				image = "Resources.car.png",
 				IsCenterAndFlat = true,
-				heading = 0,
+				heading = 45,
 				position = new Position(10.318342, 123.90506)
 			});
 			map.pins.Add(new Pin {
 				image = "Resources.car.png",
 				IsCenterAndFlat = true,
-				heading = 0,
+				heading = 90,
 				position = new Position(10.31581, 123.97906)
 			});
 			map.pins.Add(new Pin {
 				image = "Resources.car.png",
 				IsCenterAndFlat = true,
-				heading = 0,
+				heading = 135,
 				position = new Position(10.304416, 123.91161)
 			});
 			map.pins.Add(new Pin {
 				image = "Resources.car.png",
 				IsCenterAndFlat = true,
-				heading = 0,
+				heading = 180,
 				position = new Position(10.311782, 123.91805)
 			});
 
@@ -321,9 +321,7 @@ namespace MapboxTester
 
 		void Heading_Clicked(object sender, System.EventArgs e)
 		{
-			var x = rnd.Next(0, 360);
-			Console.WriteLine("heading pin one: " + x);
-			map.pins[0].heading = x;
+			map.pins[0].heading = rnd.Next(0, 360);
 			map.pins[1].heading = rnd.Next(0, 360);
 			map.pins[2].heading = rnd.Next(0, 360);
 			map.pins[3].heading = rnd.Next(0, 360);
