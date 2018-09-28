@@ -515,7 +515,8 @@ namespace MapBox.Android
 			if (e.PropertyName == Map.DefaultPinsProperty.PropertyName) {
 				if (xMap.oldDefaultPins != null)
 					xMap.oldDefaultPins.CollectionChanged -= DefaultPins_CollectionChanged;
-				xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
+				if (xMap.DefaultPins != null)
+					xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
 			}
 		}
 
