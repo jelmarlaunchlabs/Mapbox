@@ -13,7 +13,6 @@ namespace MapBox
     public class Map : View
     {
 		public event EventHandler regionChangedIdle;
-
 		public event EventHandler CameraMoveStarted;
 		public event EventHandler CameraMoving;
 		public event EventHandler<Bounds> CameraIdled;
@@ -23,6 +22,7 @@ namespace MapBox
 		internal Assembly callerAssembly { get; set; }
 		internal ObservableCollection<Pin> oldPins { get; set; }
 		internal ObservableCollection<Route> oldRoutes { get; set; }
+		internal ObservableCollection<DefaultPin> oldDefaultPins { get; set; }
 		internal IMapFunctions mapFunctions { get; set; }
 		#endregion
 
@@ -99,7 +99,16 @@ namespace MapBox
 			set { SetValue(currentMapCenterProperty, value); }
 		}
 
-		public static readonly BindableProperty DefaultPinsProperty = BindableProperty.Create(nameof(DefaultPins), typeof(ObservableCollection<DefaultPin>), typeof(Map), default(ObservableCollection<DefaultPin>), BindingMode.OneWay);
+		public static readonly BindableProperty DefaultPinsProperty = BindableProperty.Create(
+			nameof(DefaultPins),
+			typeof(ObservableCollection<DefaultPin>),
+			typeof(Map),
+			default(ObservableCollection<DefaultPin>),
+			BindingMode.OneWay,
+			propertyChanged: (bindable, p1, p2) => {
+				var view = bindable as Map;
+				view.oldDefaultPins = (ObservableCollection<DefaultPin>)p1;
+			});
 		public ObservableCollection<DefaultPin> DefaultPins {
 			get { return (ObservableCollection<DefaultPin>)GetValue(DefaultPinsProperty); }
 			set { SetValue(DefaultPinsProperty, value); }
