@@ -1,17 +1,24 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using MapBox.Abstractions;
 using MapBox.Models;
+using MapBox.Offline;
 using Xamarin.Forms;
 
 [assembly: InternalsVisibleTo("MapBox.Android"), InternalsVisibleTo("Mapbox.iOS")]
 namespace MapBox
 {
-    public class Map : View
-    {
+	public class Map : View
+	{
+		private const string packNameKey = nameof(packNameKey);
+		private const string packCreatedAtKey = nameof(packCreatedAtKey);
+
 		public event EventHandler regionChangedIdle;
 		public event EventHandler CameraMoveStarted;
 		public event EventHandler CameraMoving;
@@ -19,11 +26,13 @@ namespace MapBox
 		public event EventHandler<Position> MapClicked;
 
 		#region Internal properties
+		internal const string mapStyle = "mapbox://styles/mapbox/streets-v9";
 		internal Assembly callerAssembly { get; set; }
 		internal ObservableCollection<Pin> oldPins { get; set; }
 		internal ObservableCollection<Route> oldRoutes { get; set; }
 		internal ObservableCollection<DefaultPin> oldDefaultPins { get; set; }
 		internal IMapFunctions mapFunctions { get; set; }
+		static internal IOfflineStorageService offlineService { get; set; }
 		#endregion
 
 		#region Bindable Properties
@@ -122,6 +131,12 @@ namespace MapBox
 			callerAssembly = Assembly.GetCallingAssembly();
 			this.pins = new ObservableCollection<Pin>();
 			this.routes = new ObservableCollection<Route>();
+			offlineService.OfflinePackProgressChanged += OfflineService_OfflinePackProgressChanged;
+		}
+
+		~Map()
+		{
+			offlineService.OfflinePackProgressChanged -= OfflineService_OfflinePackProgressChanged;
 		}
 
 		public void moveMapToRegion(ICameraPerspective cameraPerspective)
@@ -158,5 +173,86 @@ namespace MapBox
 			MapClicked?.Invoke(this, position);
 		}
 		#endregion
+
+		#region Offline
+		/// <summary>
+		/// https://www.mapbox.com/help/mobile-offline/#requirements
+		/// </summary>
+		/// <param name="name">Name.</param>
+		/// <param name="minimumZoomLevel">Minimum zoom level.</param>
+		/// <param name="maximumZoomLevel">Maximum zoom level.</param>
+		/// <param name="bounds">Bounds - the geographic bounding box.</param>
+		public void dowloadMap(string name, double minimumZoomLevel, double maximumZoomLevel, Bounds bounds)
+		{
+			Task.Run(async () => {
+				var packs = await offlineService.GetPacks();
+				if (packs != null && packs.Any(p => p.Info.ContainsValue(name))) {
+					Debug.WriteLine("A pack with the same name/key already exist");
+					return;
+				}
+
+				var region = new OfflinePackRegion {
+					StyleURL = mapStyle,
+					MinimumZoomLevel = minimumZoomLevel,
+					MaximumZoomLevel = maximumZoomLevel,
+					Bounds = bounds
+				};
+
+				var pack = await offlineService.DownloadMap(region, new System.Collections.Generic.Dictionary<string, string> {
+					{packNameKey, name},
+					{packCreatedAtKey, DateTime.Now.ToString("HH:mm:ss dd/MM/yyyy")}
+				});
+
+				if (pack != null)
+					offlineService.RequestPackProgress(pack);
+				else {
+					// Download failed
+				}
+			});
+		}
+
+		public void loadMapPack(string name)
+		{
+			Task.Run(async () => {
+				var packs = await offlineService.GetPacks();
+				if (packs != null && packs.Length > 0) {
+					var pack = packs.FirstOrDefault(p => p.Info.ContainsValue(name));
+					Device.BeginInvokeOnMainThread(() => {
+						this.moveMapToRegion(Factory.CameraPerspectiveFactory.fromCoordinates(pack.Region.Bounds.Center));
+					});
+				}
+			});
+		}
+
+		public async Task<bool> hasMapPack(string name)
+		{
+			var packs = await offlineService.GetPacks();
+			return packs.Any(p => p.Info.ContainsValue(name));
+		}
+
+		public void clearOfflineMapPacks()
+		{
+			Task.Run(async () => {
+				var packs = await offlineService.GetPacks();
+				if (packs != null)
+					foreach (var pack in packs)
+						await offlineService.RemovePack(pack);
+			});
+		}
+
+		void OfflineService_OfflinePackProgressChanged(object sender, OSSEventArgs e)
+		{
+			var progress = e.OfflinePack.Progress;
+			float percentage = 0;
+			if (progress.CountOfResourcesExpected > 0)
+				percentage = (float)progress.CountOfResourcesCompleted / progress.CountOfResourcesExpected;
+
+			Debug.WriteLine($"Downloaded resources: {progress.CountOfResourcesCompleted} ({percentage * 100} %)");
+			Debug.WriteLine($"Downloaded tiles: {progress.CountOfTilesCompleted}");
+			if (progress.CountOfResourcesExpected == progress.CountOfResourcesCompleted)
+				Debug.WriteLine("Download completed");
+		}
+		#endregion
+
 	}
 }

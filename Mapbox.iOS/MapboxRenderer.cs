@@ -56,6 +56,7 @@ namespace Mapbox.iOS
 		public static void init(string accessToken)
         {
 			MGLAccountManager.AccessToken = accessToken;
+			Map.offlineService = Xamarin.Forms.DependencyService.Get<MapBox.Offline.IOfflineStorageService>();
 		}
 
         protected override void OnElementChanged(ElementChangedEventArgs<Map> e)
@@ -592,7 +593,6 @@ namespace Mapbox.iOS
 				}
 			});
 		}
-		#endregion
 
 		[Export("mapView:regionWillChangeAnimated:")]
 		public void regionWillChangeAnimated(MGLMapView mGLMapView, bool animated)
@@ -618,6 +618,7 @@ namespace Mapbox.iOS
 				nMap.VisibleCoordinateBounds.ne.toFormsPosition(),
 				nMap.CenterCoordinate.toFormsPosition()));
 		}
+		#endregion
 
 		public void updateMapPerspective(ICameraPerspective cameraPerspective)
 		{

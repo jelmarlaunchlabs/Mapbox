@@ -9,14 +9,16 @@
         <Label x:Name="mapAction" Text="" FontSize="12" TextColor="Red" VerticalTextAlignment="Center" HorizontalTextAlignment="Center" InputTransparent="true" Margin="0,30,0,0" VerticalOptions="Start" HorizontalOptions="Center"/>
         <!--<mapbox:TestImage HorizontalOptions="Center"
                       VerticalOptions="Center"/>-->
-        <StackLayout Margin="0,0,0,30" Spacing="1" VerticalOptions="End">
-            <!--<Button Text="Heading" Clicked="Heading_Clicked" HeightRequest="40" WidthRequest="250" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>
-            <Button Text="Visibility" Clicked="Visibility_Clicked" HeightRequest="40" WidthRequest="250" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>
-            <Button Text="Move Camera with Animated" Clicked="MoveCamera_Clicked" ClassId="animated" HeightRequest="40" WidthRequest="250" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>
-            <Button Text="Move Camera without Animation" Clicked="MoveCamera_Clicked" ClassId="notAnimated" HeightRequest="40" WidthRequest="250" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>-->
-            <Button Text="Download Map" Clicked="DownloadMap_Clicked"/>
-            <Button Text="Load Map" Clicked="loadMap"/>
-            <Button Text="Clear Map" Clicked="clearMap"/>
-        </StackLayout>
+        <ScrollView Margin="0,0,0,30" Orientation="Horizontal" VerticalOptions="End">
+            <StackLayout Orientation="Horizontal" Spacing="10">
+                <Button Text="Heading" Clicked="Heading_Clicked" HeightRequest="40" WidthRequest="150" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>
+                <Button Text="Visibility" Clicked="Visibility_Clicked" HeightRequest="40" WidthRequest="150" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>
+                <Button Text="Animated" Clicked="MoveCamera_Clicked" ClassId="animated" HeightRequest="40" WidthRequest="150" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>
+                <Button Text="Not Animated" Clicked="MoveCamera_Clicked" ClassId="notAnimated" HeightRequest="40" WidthRequest="150" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>
+                <Button Text="Download Map" Clicked="DownloadMap_Clicked" HeightRequest="40" WidthRequest="150" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>
+                <Button Text="Load Map" Clicked="loadMap" HeightRequest="40" WidthRequest="150" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>
+                <Button Text="Clear Map" Clicked="clearMap" HeightRequest="40" WidthRequest="150" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>
+            </StackLayout>    
+        </ScrollView>
     </Grid>
 </ContentPage>
