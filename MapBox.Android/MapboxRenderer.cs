@@ -67,6 +67,7 @@ namespace MapBox.Android
 		{
 			// Initialize the token
 			Com.Mapbox.Mapboxsdk.Mapbox.GetInstance(context, accessToken);
+			Map.offlineService = DependencyService.Get<XMapbox.Offline.IOfflineStorageService>();
 		}
 
 		public MapboxRenderer(Context context) : base(context)
@@ -82,7 +83,7 @@ namespace MapBox.Android
 			}
 			if (e.OldElement != null) {
 				// Unsubscribe
-				var map = e.NewElement;
+				var map = e.OldElement;
 
 				// Unsubscribe to changes in the collection first
 				if (map.pins != null)
@@ -95,7 +96,11 @@ namespace MapBox.Android
 					map.routes.CollectionChanged -= Routes_CollectionChanged;
 
 				// Native map unsubscribe
-				nMap.CameraIdle -= NMap_CameraIdle;
+				if (nMap != null) {
+					nMap.CameraIdle -= NMap_CameraIdle;
+					nMap.CameraMoveStarted -= NMap_CameraMoveStarted;
+					nMap.CameraMove -= NMap_CameraMove;
+				}
 
 				removeAllPins();
 
@@ -134,7 +139,7 @@ namespace MapBox.Android
 		public void OnMapReady(MapboxMap mapBox)
 		{
 			nMap = mapBox;
-			nMap.SetStyle("mapbox://styles/mapbox/streets-v9");
+			nMap.SetStyle(Map.mapStyle);
 			//nMap.SetStyle("mapbox://styles/mapbox/light-v9");
 			nMap.UiSettings.CompassEnabled = false;
 			nMap.AddOnMapClickListener(this);
@@ -142,9 +147,9 @@ namespace MapBox.Android
 			nMap.CameraMoveStarted += NMap_CameraMoveStarted;
 			nMap.CameraMove += NMap_CameraMove;
 
-			// This will make sure the map is FULLY LOADED and not just ready
-			// Because it will not load pins/polylines if the operation is executed immediately
-			Device.StartTimer(TimeSpan.FromMilliseconds(100), () => {
+			// This will make sure the map is FULLY LOADED and not just ready this is to support on-run highly customized pins
+			// Because it will not load pins/polylines if the operation is executed immediately e.g. (xMap == null)
+			Device.StartTimer(TimeSpan.FromMilliseconds(25), () => {
 				// If cross map has not been assigned a value yet the retry initializations in the next x millisecond
 				if (xMap == null)
 					return true;
@@ -152,26 +157,30 @@ namespace MapBox.Android
 				if (xMap.initialCameraUpdate != null)
 					updateMapPerspective(xMap.initialCameraUpdate);
 
-				// Initialize route first so that it will be the first in the layer list z-index = 0
-				initializeRoutesLayer();
-				addAllRoutes();
+				// Another wait for the first install first run tiles to load
+				Device.StartTimer(TimeSpan.FromMilliseconds(700), () => {
+					// Initialize route first so that it will be the first in the layer list z-index = 0
+					initializeRoutesLayer();
+					addAllRoutes();
 
-				// Add all pin first
-				initializePinsLayer();
-				addAllReusablePinImages();
-				addAllPins();
+					// Add all pin first
+					initializePinsLayer();
+					addAllReusablePinImages();
+					addAllPins();
 
-				// Then subscribe to pins added
-				if (xMap.pins != null)
-					xMap.pins.CollectionChanged += Pins_CollectionChanged;
-				if (xMap.DefaultPins != null)
-					xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
+					// Then subscribe to pins added
+					if (xMap.pins != null)
+						xMap.pins.CollectionChanged += Pins_CollectionChanged;
+					if (xMap.DefaultPins != null)
+						xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
 
-				if(xMap.routes!=null)
-					xMap.routes.CollectionChanged += Routes_CollectionChanged;
+					if (xMap.routes != null)
+						xMap.routes.CollectionChanged += Routes_CollectionChanged;
 
-				// Subscribe to changes in map bindable properties after all pins are loaded
-				xMap.PropertyChanged += Map_PropertyChanged;
+					// Subscribe to changes in map bindable properties after all pins are loaded
+					xMap.PropertyChanged += Map_PropertyChanged;
+					return false;
+				});
 				return false;
 			});
 		}
@@ -605,9 +614,8 @@ namespace MapBox.Android
 			else
 			{
 				xMap.mapClicked(point.toFormsPostion());
-			}	
+			}
 		}
-		#endregion
 
 		void NMap_CameraMoveStarted(object sender, MapboxMap.CameraMoveStartedEventArgs e)
 		{
@@ -630,6 +638,7 @@ namespace MapBox.Android
 				nMap.Projection.VisibleRegion.FarRight.toFormsPostion(),
 				nMap.CameraPosition.Target.toFormsPostion()));
 		}
+		#endregion
 
 		public void updateMapPerspective(ICameraPerspective cameraPerspective)
 		{

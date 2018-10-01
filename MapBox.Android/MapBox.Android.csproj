@@ -182,6 +182,12 @@
     <Compile Include="DependecyService\DisplayMetricsImplementation.cs" />
     <Compile Include="Extension\SymbolLayerExtension.cs" />
     <Compile Include="Extension\MapExtensions.cs" />
+    <Compile Include="Offline\CreateOfflineRegionCallback.cs" />
+    <Compile Include="Offline\ListOfflineRegionsCallback.cs" />
+    <Compile Include="Offline\OfflinePackExtensions.cs" />
+    <Compile Include="Offline\OfflineRegionDeleteCallback.cs" />
+    <Compile Include="Offline\OfflineRegionObserver.cs" />
+    <Compile Include="Offline\OfflineStorageService.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\AboutResources.txt" />
@@ -192,13 +198,14 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MapBox\MapBox.csproj">
-      <Project>{6066DD59-5EB5-4CC5-9398-4A534CB6A0BF}</Project>
+      <Project>{4AA9B80E-1180-4ACB-A401-7202CD3799BD}</Project>
       <Name>MapBox</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DependecyService\" />
     <Folder Include="Extension\" />
+    <Folder Include="Offline\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />
   <Import Project="..\packages\Xamarin.Forms.3.0.0.482510\build\netstandard2.0\Xamarin.Forms.targets" Condition="Exists('..\packages\Xamarin.Forms.3.0.0.482510\build\netstandard2.0\Xamarin.Forms.targets')" />

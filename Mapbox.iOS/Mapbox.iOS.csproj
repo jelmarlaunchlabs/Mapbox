@@ -67,6 +67,7 @@
     <Folder Include="Resources\" />
     <Folder Include="DependencyService\" />
     <Folder Include="Extensions\" />
+    <Folder Include="Offline\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="MapboxRenderer.cs" />
@@ -74,10 +75,14 @@
     <Compile Include="DependencyService\DisplayMetricsImplementation.cs" />
     <Compile Include="Extensions\SymbolLayerExtension.cs" />
     <Compile Include="Extensions\MapExtensions.cs" />
+    <Compile Include="Offline\IMGLOfflineRegionExtensions.cs" />
+    <Compile Include="Offline\MGLOfflinePackExtensions.cs" />
+    <Compile Include="Offline\MGLOfflinePackProgressExtensions.cs" />
+    <Compile Include="Offline\OfflineStorageService.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MapBox\MapBox.csproj">
-      <Project>{6066DD59-5EB5-4CC5-9398-4A534CB6A0BF}</Project>
+      <Project>{4AA9B80E-1180-4ACB-A401-7202CD3799BD}</Project>
       <Name>MapBox</Name>
     </ProjectReference>
   </ItemGroup>
