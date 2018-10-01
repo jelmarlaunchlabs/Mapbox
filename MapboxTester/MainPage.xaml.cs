@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using MapBox;
 using MapBox.Factory;
 using MapBox.Models;
+using MapBox.Offline;
 using Xamarin.Forms;
 
 namespace MapboxTester
@@ -17,7 +19,7 @@ namespace MapboxTester
 		{
 			InitializeComponent();
 
-			map.initialCameraUpdate = CameraPerspectiveFactory.fromCenterAndZoomLevel(new Position(10.336712, 123.929958), 10);
+			map.initialCameraUpdate = CameraPerspectiveFactory.fromCenterAndZoomLevel(new Position(10.309852, 123.893151), 10);
 
 			map.pins.Add(new Pin {
 				image = "Resources.car.png",
@@ -253,16 +255,75 @@ namespace MapboxTester
 			map.MapClicked += Map_MapClicked;
 
 			map.DefaultPins = new ObservableCollection<DefaultPin>();
+
+			Device.StartTimer(TimeSpan.FromSeconds(3), () => {
+				offlineService = DependencyService.Get<IOfflineStorageService>();
+				offlineService.OfflinePackProgressChanged += OfflineService_OfflinePackProgressChanged;
+				return false;
+			});
+
 		}
 
-		void DownloadMap_Clicked(object sender, System.EventArgs e)
+		void OfflineService_OfflinePackProgressChanged(object sender, OSSEventArgs e)
 		{
-
+			var progress = e.OfflinePack.Progress;
+			float percentage = 0;
+			if (progress.CountOfResourcesExpected > 0) {
+				percentage = (float)progress.CountOfResourcesCompleted / progress.CountOfResourcesExpected;
+			}
+			Debug.WriteLine($"Downloaded resources: {progress.CountOfResourcesCompleted} ({percentage * 100} %)");
+			Debug.WriteLine($"Downloaded tiles: {progress.CountOfTilesCompleted}");
+			if (progress.CountOfResourcesExpected == progress.CountOfResourcesCompleted) {
+				Debug.WriteLine("Download completed");
+			}
 		}
 
-		void loadMap(object sender, System.EventArgs e)
+
+        IOfflineStorageService offlineService;
+		async void DownloadMap_Clicked(object sender, System.EventArgs e)
 		{
-			throw new NotImplementedException();
+			if (offlineService == null)
+				return;
+			var region = new OfflinePackRegion() {
+				StyleURL = "mapbox://styles/mapbox/streets-v9",
+				MaximumZoomLevel = 14,
+				MinimumZoomLevel = 1,
+				Bounds = new Bounds(new Position(10.309852 + 0.01, 123.893151 - 0.005), new Position(10.309852 - 0.01, 123.893151 + 0.005))
+			};
+			var pack = await offlineService.DownloadMap(region, new System.Collections.Generic.Dictionary<string, string>() {
+				{"name", "test"},
+				{"started_at", DateTime.Now.ToString("HH:mm:ss dd/MM/yyyy")}
+			});
+			if (pack != null) {
+				offlineService.RequestPackProgress(pack);
+			} else {
+
+			}
+		}
+
+		async void loadMap(object sender, System.EventArgs e)
+		{
+			var packs = await offlineService.GetPacks();
+			if (packs != null && packs.Length != 0) {
+				var buttons = new List<string>();
+				foreach (OfflinePack pack in packs) {
+					if (pack.Info != null
+						&& pack.Info.TryGetValue("name", out string name)
+						&& pack.Info.TryGetValue("started_at", out string startTime)) {
+						buttons.Add(name + " - " + startTime);
+					}
+				}
+				//var chosen = await UserDialogs.Instance.ActionSheetAsync("Load offline pack", "Cancel", null, null, buttons.ToArray());
+				//var chosenIndex = buttons.IndexOf(chosen);
+				//if (chosenIndex >= 0 && chosenIndex < packs.Length) {
+				//	var chosenPack = packs[chosenIndex];
+				//	//forcedRegion = chosenPack.Region;
+				//	//CurrentMapStyle = new MapStyle(chosenPack.Region.StyleURL);
+				//	ApplyOfflinePackFunc?.Invoke(chosenPack);
+				//}
+			} else {
+				Debug.WriteLine("There's no offline pack to load");
+			}
 		}
 
 		void clearMap(object sender, System.EventArgs e)
