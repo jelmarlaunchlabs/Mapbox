@@ -227,6 +227,8 @@ namespace MapBox
 		public async Task<bool> hasMapPack(string name)
 		{
 			var packs = await offlineService.GetPacks();
+			if (packs == null)
+				return false;
 			return packs.Any(p => p.Info.ContainsValue(name));
 		}
 
