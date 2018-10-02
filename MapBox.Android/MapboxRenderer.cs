@@ -42,6 +42,8 @@ namespace MapBox.Android
 		public const string pin_rotation_key = nameof(pin_rotation_key);
 		public const string pin_size_key = nameof(pin_size_key);
 		public const string pin_offset_key = nameof(pin_offset_key);
+
+		public const string pin_id_key = nameof(pin_id_key);
 		#endregion
 
 		#region Route constants
@@ -486,13 +488,13 @@ namespace MapBox.Android
 									}
 									currentHeadingCollection[i] = theCurrentHeading;
 
-
 									var feature = Feature.FromGeometry(
 										Com.Mapbox.Geojson.Point.FromLngLat(theCurrentAnimationJump.longitude,
 																			theCurrentAnimationJump.latitude));
 									feature.AddStringProperty(MapboxRenderer.pin_image_key, p.image);
 									feature.AddNumberProperty(MapboxRenderer.pin_rotation_key, (Java.Lang.Number)theCurrentHeading);
 									feature.AddNumberProperty(MapboxRenderer.pin_size_key, (Java.Lang.Number)p.imageScaleFactor);
+									feature.AddStringProperty(MapboxRenderer.pin_id_key, p.id);
 
 									// Add to the new animation frame
 									features.Add(feature);
@@ -606,10 +608,11 @@ namespace MapBox.Android
 
 			System.Diagnostics.Debug.WriteLine($"Features: {features}");
 
-			// TODO: Return the actual pin clicked
 			if (features.Any() && xMap.pinClickedCommand != null)
 			{
-				xMap.pinClickedCommand.Execute(null);
+				if (features[0] is Feature feature) {
+					xMap.pinClickedCommand.Execute(xMap.pins.FirstOrDefault(x=>x.id == feature.GetStringProperty(pin_id_key).ToString()));
+				}
 			}
 			else
 			{

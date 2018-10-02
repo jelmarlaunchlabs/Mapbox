@@ -34,13 +34,15 @@ namespace Mapbox.iOS.Extensions
 						pin.image,
 						pin.heading,
 						pin.imageScaleFactor,
-						NSArray.FromObjects(offset)
+						NSArray.FromObjects(offset),
+						pin.id
 					},
 					new object[]{
 						MapboxRenderer.pin_image_key,
 						MapboxRenderer.pin_rotation_key,
 						MapboxRenderer.pin_size_key,
-						MapboxRenderer.pin_offset_key
+						MapboxRenderer.pin_offset_key,
+						MapboxRenderer.pin_id_key
 					}
 				);
 
