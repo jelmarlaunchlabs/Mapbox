@@ -56,6 +56,7 @@ namespace Mapbox.iOS
 		public static void init(string accessToken)
         {
 			MGLAccountManager.AccessToken = accessToken;
+			Map.offlineService = Xamarin.Forms.DependencyService.Get<MapBox.Offline.IOfflineStorageService>();
 		}
 
         protected override void OnElementChanged(ElementChangedEventArgs<Map> e)
@@ -72,10 +73,9 @@ namespace Mapbox.iOS
 
 				// Unsubscribe to changes in the collection first
 				if (map.pins != null)
-				{
 					map.pins.CollectionChanged -= Pins_CollectionChanged;
+				if (map.DefaultPins != null)
 					map.DefaultPins.CollectionChanged -= DefaultPins_CollectionChanged;
-				}
 
 				// Unsubscribe to changes in the collection first
 				if (map.routes != null)
@@ -128,10 +128,9 @@ namespace Mapbox.iOS
 
 			// Then subscribe to pins added
 			if (xMap.pins != null)
-			{
 				xMap.pins.CollectionChanged += Pins_CollectionChanged;
+			if (xMap.DefaultPins != null)
 				xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
-			}
 
 			if (xMap.routes != null)
 				xMap.routes.CollectionChanged += Routes_CollectionChanged;
@@ -594,7 +593,6 @@ namespace Mapbox.iOS
 				}
 			});
 		}
-		#endregion
 
 		[Export("mapView:regionWillChangeAnimated:")]
 		public void regionWillChangeAnimated(MGLMapView mGLMapView, bool animated)
@@ -620,6 +618,7 @@ namespace Mapbox.iOS
 				nMap.VisibleCoordinateBounds.ne.toFormsPosition(),
 				nMap.CenterCoordinate.toFormsPosition()));
 		}
+		#endregion
 
 		public void updateMapPerspective(ICameraPerspective cameraPerspective)
 		{
