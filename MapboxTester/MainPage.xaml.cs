@@ -22,18 +22,21 @@ namespace MapboxTester
 			map.initialCameraUpdate = CameraPerspectiveFactory.fromCenterAndZoomLevel(new Position(10.309852, 123.893151), 10);
 
 			map.pins.Add(new Pin {
+				id = "1",
 				image = "Resources.car.png",
 				IsCenterAndFlat = true,
 				heading = 0,
 				position = new Position(10.318342, 123.90506)
 			});
 			map.pins.Add(new Pin {
+				id = "2",
 				image = "Resources.car.png",
 				IsCenterAndFlat = true,
 				heading = 0,
 				position = new Position(10.31581, 123.97906)
 			});
 			map.pins.Add(new Pin {
+				id = "3",
 				image = "Resources.car.png",
 				IsCenterAndFlat = true,
 				heading = 0,
@@ -256,12 +259,13 @@ namespace MapboxTester
 
 			map.DefaultPins = new ObservableCollection<DefaultPin>();
 
+			map.pinClickedCommand = new Command<Pin>((pin) => { Console.WriteLine("Pin Clicked: ID - " + pin.id); });
+
 			//Device.StartTimer(TimeSpan.FromSeconds(3), () => {
 			//	offlineService = DependencyService.Get<IOfflineStorageService>();
 			//	offlineService.OfflinePackProgressChanged += OfflineService_OfflinePackProgressChanged;
 			//	return false;
 			//});
-
 		}
 
 		//void OfflineService_OfflinePackProgressChanged(object sender, OSSEventArgs e)
@@ -395,9 +399,7 @@ namespace MapboxTester
 
 		void Heading_Clicked(object sender, System.EventArgs e)
 		{
-			var x = rnd.Next(0, 360);
-			Console.WriteLine("heading pin one: " + x);
-			map.pins[0].heading = x;
+			map.pins[0].heading = rnd.Next(0, 360);
 			map.pins[1].heading = rnd.Next(0, 360);
 			map.pins[2].heading = rnd.Next(0, 360);
 			map.pins[3].heading = rnd.Next(0, 360);

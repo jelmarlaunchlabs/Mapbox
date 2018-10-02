@@ -33,6 +33,7 @@ namespace MapBox.Android.Extensions
 				offset.Add((Java.Lang.Number)pin.iconOffset.X);
 				offset.Add((Java.Lang.Number)pin.iconOffset.Y);
 				feature.AddProperty(MapboxRenderer.pin_offset_key, offset);
+				feature.AddStringProperty(MapboxRenderer.pin_id_key, pin.id);
 				features.Add(feature);
 			}
 

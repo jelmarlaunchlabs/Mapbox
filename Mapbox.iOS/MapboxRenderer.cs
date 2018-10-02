@@ -32,6 +32,8 @@ namespace Mapbox.iOS
 		public const string pin_rotation_key = nameof(pin_rotation_key);
 		public const string pin_size_key = nameof(pin_size_key);
 		public const string pin_offset_key = nameof(pin_offset_key);
+
+		public const string pin_id_key = nameof(pin_id_key);
 		#endregion
 
 		#region Route constants
@@ -448,14 +450,16 @@ namespace Mapbox.iOS
 									};
 									feature.Attributes = NSDictionary<NSString, NSObject>.FromObjectsAndKeys(
 										new object[] {
-												pin.image,
+												p.image,
 												theCurrentHeading,
-												pin.imageScaleFactor
+												p.imageScaleFactor,
+												p.id
 										},
 										new object[] {
 												MapboxRenderer.pin_image_key,
 												MapboxRenderer.pin_rotation_key,
-												MapboxRenderer.pin_size_key
+												MapboxRenderer.pin_size_key,
+												MapboxRenderer.pin_id_key
 										});
 
 									// Add to the new animation frame
@@ -575,15 +579,7 @@ namespace Mapbox.iOS
 					if (features.Any() && xMap.pinClickedCommand != null)
 					{
 						if (features[0] is MGLPointFeature mGLPointFeature) {
-							var p = mGLPointFeature.Coordinate.toFormsPosition();
-							var image = mGLPointFeature.Attributes.ValueForKey(new NSString(pin_image_key));
-
-							// TODO: Return the actual pin
-							xMap.pinClickedCommand.Execute(
-								new Pin {
-									image = image.ToString(),
-									position = p
-								});
+							xMap.pinClickedCommand.Execute(xMap.pins.FirstOrDefault(x=>x.id == mGLPointFeature.Attributes.ValueForKey(new NSString(pin_id_key)).ToString()));
 						}
 					}
 					else
