@@ -424,13 +424,12 @@ namespace Mapbox.iOS
 
 					var visibleMovablePinCount = pinsWithSimilarKey.Count(p => p.isVisible);
 					var currentHeadingCollection = new double[visibleMovablePinCount];
+					var features = new NSObject[visibleMovablePinCount];
 
 					// Update the entire frame
 					MapBox.Extensions.MapExtensions.animatePin(
 						(double d) => {
 							System.Threading.Tasks.Task.Run(() => {
-								var features = new List<NSObject>();
-
 								for (int i = 0; i < visibleMovablePinCount; i++) {
 									var p = pinsWithSimilarKey[i];
 									Position theCurrentAnimationJump = p.position;
@@ -463,11 +462,11 @@ namespace Mapbox.iOS
 										});
 
 									// Add to the new animation frame
-									features.Add(feature);
+									features[i] = feature;
 								}
 
 								// Update the entire layer
-								Device.BeginInvokeOnMainThread(() => geoJsonSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(features.toShapeSourceArray()));
+								Device.BeginInvokeOnMainThread(() => geoJsonSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(features));
 							});
 						},
 						(d, b) => {

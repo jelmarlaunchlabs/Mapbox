@@ -118,6 +118,10 @@ namespace MapBox
 				var view = bindable as Map;
 				view.oldDefaultPins = (ObservableCollection<DefaultPin>)p1;
 			});
+		/// <summary>
+		/// This is for test pin only, e.g. to calibrate the custom pin and map bounds, no working remove and clear()
+		/// </summary>
+		/// <value>The default pins.</value>
 		public ObservableCollection<DefaultPin> DefaultPins {
 			get { return (ObservableCollection<DefaultPin>)GetValue(DefaultPinsProperty); }
 			set { SetValue(DefaultPinsProperty, value); }

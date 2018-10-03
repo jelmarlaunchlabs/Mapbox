@@ -468,13 +468,12 @@ namespace MapBox.Android
 
 					var visibleMovablePinCount = pinsWithSimilarKey.Count(p => p.isVisible);
 					var currentHeadingCollection = new double[visibleMovablePinCount];
+					var features = new Feature[visibleMovablePinCount];
 
 					// Update the entire frame
 					MapBox.Extensions.MapExtensions.animatePin(
 						(double d) => {
 							System.Threading.Tasks.Task.Run(() => {
-								var features = new List<Feature>();
-
 								for (int i = 0; i < visibleMovablePinCount; i++) {
 									var p = pinsWithSimilarKey[i];
 									Position theCurrentAnimationJump = p.position;
@@ -497,7 +496,7 @@ namespace MapBox.Android
 									feature.AddStringProperty(MapboxRenderer.pin_id_key, p.id);
 
 									// Add to the new animation frame
-									features.Add(feature);
+									features[i] = feature;
 								}
 
 								// Extension method bypass, fromFeatures accepts IList as parameter
