@@ -4,6 +4,9 @@ using Xamarin.Forms;
 
 namespace MapBox
 {
+	/// <summary>
+	/// This is only for test pin, (custom pin calibrator and bounds calibrator)
+	/// </summary>
 	public class DefaultPin : BindableObject
 	{
 		public static readonly BindableProperty PositionProperty = BindableProperty.Create(nameof(Position), typeof(Position), typeof(DefaultPin), default(Position), BindingMode.OneWay);
