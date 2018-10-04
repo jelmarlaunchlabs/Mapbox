@@ -447,6 +447,11 @@ namespace MapBox.Android
 			}
 		}
 
+		/// <summary>
+		/// This has a problem, if the same pin updates a couple of times a second pin might jump suddenly to the
+		/// 2nd to latest position then smooth animate to the latest position
+		/// </summary>
+		/// <param name="pin">Pin.</param>
 		private void animateLocationChange(Pin pin)
 		{
 			#region Simultaneous pin update
@@ -456,7 +461,6 @@ namespace MapBox.Android
 					return;
 
 				// Wait for pin position assignment in the same call
-				await System.Threading.Tasks.Task.Delay(10);
 				isPinAnimating = true;
 
 				// Get all pins with the same key and same flat value (animatable pins)
@@ -506,13 +510,20 @@ namespace MapBox.Android
 								Device.BeginInvokeOnMainThread(() => geoJsonSource.SetGeoJson(featureCollection));
 							});
 						},
-						(d, b) => {
+						async (d, b) => {
+							// DO NOT REMOVE, this is essential for the simultaneous pin location update to work
+							await System.Threading.Tasks.Task.Delay(500);
+
 							isPinAnimating = false;
 
 							// Stabilize the pins, at this moment all the pins are updated
 							for (int i = 0; i < visibleMovablePinCount; i++) {
-								pinsWithSimilarKey[i].requestForUpdate = false;
-								pinsWithSimilarKey[i].heading = currentHeadingCollection[i];
+								var p = pinsWithSimilarKey[i];
+								// To avoid triggering heading property change event
+								p.PropertyChanged -= Pin_PropertyChanged;
+								p.requestForUpdate = false;
+								p.heading = currentHeadingCollection[i];
+								p.PropertyChanged += Pin_PropertyChanged;
 							}
 						}, 500);
 				});
