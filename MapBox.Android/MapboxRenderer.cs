@@ -104,9 +104,9 @@ namespace MapBox.Android
 					nMap.CameraMove -= NMap_CameraMove;
 				}
 
-				removeAllPins();
+				removeAllPins(false);
 
-				removeAllRoutes();
+				removeAllRoutes(false);
 
 				// Unubscribe to changes in map bindable properties
 				map.PropertyChanged -= Map_PropertyChanged;
@@ -224,7 +224,8 @@ namespace MapBox.Android
 		#endregion
 
 		#region Post route initialization route operations
-		private void removeAllRoutes()
+		// Must be true if from new instance of collection
+		private void removeAllRoutes(bool isFromNewCollection)
 		{
 			if (xMap.routes == null)
 				return;
@@ -240,7 +241,8 @@ namespace MapBox.Android
 					route.PropertyChanged -= Route_PropertyChanged;
 				xMap.oldRoutes.CollectionChanged -= Routes_CollectionChanged;
 			}
-			xMap.routes.CollectionChanged += Routes_CollectionChanged;
+			if (isFromNewCollection)
+				xMap.routes.CollectionChanged += Routes_CollectionChanged;
 
 			// Subscribe new routes
 			foreach (var route in xMap.routes)
@@ -275,7 +277,7 @@ namespace MapBox.Android
 					updateRouteCollection();
 					break;
 				case NotifyCollectionChangedAction.Reset:
-					removeAllRoutes();
+					removeAllRoutes(false);
 					break;
 			}
 		}
@@ -364,7 +366,8 @@ namespace MapBox.Android
 		#endregion
 
 		#region Post pin initialization pin operations
-		private void removeAllPins()
+		// Must be true if from new instance of collection
+		private void removeAllPins(bool isFromNewCollection)
 		{
 			if (xMap.pins == null)
 				return;
@@ -384,7 +387,8 @@ namespace MapBox.Android
 					pin.PropertyChanged -= Pin_PropertyChanged;
 				xMap.oldPins.CollectionChanged -= Pins_CollectionChanged;
 			}
-			xMap.pins.CollectionChanged += Pins_CollectionChanged;
+			if (isFromNewCollection)
+				xMap.pins.CollectionChanged += Pins_CollectionChanged;
 
 			// Subcribe each new pin to change monitoring
 			foreach (var pin in xMap.pins)
@@ -449,7 +453,8 @@ namespace MapBox.Android
 
 		/// <summary>
 		/// This has a problem, if the same pin updates a couple of times a second pin might jump suddenly to the
-		/// 2nd to latest position then smooth animate to the latest position
+		/// 2nd to latest position then smooth animate to the latest position, but I think this is ok logically since
+		/// By the time it's animating its final animation position is not really up to date.
 		/// </summary>
 		/// <param name="pin">Pin.</param>
 		private void animateLocationChange(Pin pin)
@@ -537,9 +542,9 @@ namespace MapBox.Android
 		{
 			if (e.PropertyName == XMapbox.Map.pinsProperty.PropertyName)
 				// The entire pins collection itself has been changed
-				removeAllPins();
+				removeAllPins(true);
 			else if (e.PropertyName == XMapbox.Map.routesProperty.PropertyName)
-				removeAllRoutes();
+				removeAllRoutes(true);
 			if (e.PropertyName == Map.DefaultPinsProperty.PropertyName) {
 				if (xMap.oldDefaultPins != null)
 					xMap.oldDefaultPins.CollectionChanged -= DefaultPins_CollectionChanged;
@@ -565,7 +570,7 @@ namespace MapBox.Android
 					}
 					break;
 				case NotifyCollectionChangedAction.Reset:
-					removeAllPins();
+					removeAllPins(false);
 					break;
 			}
 		}
