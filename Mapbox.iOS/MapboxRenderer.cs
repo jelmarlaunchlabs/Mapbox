@@ -83,9 +83,9 @@ namespace Mapbox.iOS
 				if (map.routes != null)
 					map.routes.CollectionChanged -= Routes_CollectionChanged;
 
-				removeAllPins();
+				removeAllPins(false);
 
-				removeAllRoutes();
+				removeAllRoutes(false);
 
 				// Unubscribe to changes in map bindable properties
 				map.PropertyChanged -= Map_PropertyChanged;
@@ -179,7 +179,8 @@ namespace Mapbox.iOS
 		#endregion
 
 		#region Post route initialization route operations
-		private void removeAllRoutes()
+		// Must be true if from new instance of collection
+		private void removeAllRoutes(bool isFromNewCollection)
 		{
 			if (xMap.routes == null)
 				return;
@@ -195,7 +196,8 @@ namespace Mapbox.iOS
 					route.PropertyChanged -= Route_PropertyChanged;
 				xMap.oldRoutes.CollectionChanged -= Routes_CollectionChanged;
 			}
-			xMap.routes.CollectionChanged += Routes_CollectionChanged;
+			if (isFromNewCollection)
+				xMap.routes.CollectionChanged += Routes_CollectionChanged;
 
 			// Subscribe new routes
 			foreach (var route in xMap.routes)
@@ -230,7 +232,7 @@ namespace Mapbox.iOS
 					updateRouteCollection();
 					break;
 				case NotifyCollectionChangedAction.Reset:
-					removeAllRoutes();
+					removeAllRoutes(false);
 					break;
 			}
 		}
@@ -322,7 +324,8 @@ namespace Mapbox.iOS
 		#endregion
 
 		#region Post pin initialization pin operations
-		private void removeAllPins()
+		// Must be true if from new instance of collection
+		private void removeAllPins(bool isFromNewCollection)
 		{
 			if (xMap.pins == null)
 				return;
@@ -344,7 +347,8 @@ namespace Mapbox.iOS
 					pin.PropertyChanged -= Pin_PropertyChanged;
 				xMap.oldPins.CollectionChanged -= Pins_CollectionChanged;
 			}
-			xMap.pins.CollectionChanged += Pins_CollectionChanged;
+			if (isFromNewCollection)
+				xMap.pins.CollectionChanged += Pins_CollectionChanged;
 
 			// Subcribe each new pin to change monitoring
 			foreach (var pin in xMap.pins)
@@ -501,9 +505,9 @@ namespace Mapbox.iOS
 		{
 			// The entire pins collection itself has been changed
 			if (e.PropertyName == Map.pinsProperty.PropertyName)
-				removeAllPins();
+				removeAllPins(true);
 			if (e.PropertyName == Map.routesProperty.PropertyName)
-				removeAllRoutes();
+				removeAllRoutes(true);
 			if (e.PropertyName == Map.DefaultPinsProperty.PropertyName) {
 				if (xMap.oldDefaultPins != null)
 					xMap.oldDefaultPins.CollectionChanged -= DefaultPins_CollectionChanged;
@@ -529,7 +533,7 @@ namespace Mapbox.iOS
 					}
 					break;
 				case NotifyCollectionChangedAction.Reset:
-					removeAllPins();
+					removeAllPins(false);
 					break;
 			}
 		}
