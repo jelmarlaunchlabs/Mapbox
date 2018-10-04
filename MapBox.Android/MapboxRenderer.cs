@@ -160,7 +160,7 @@ namespace MapBox.Android
 					updateMapPerspective(xMap.initialCameraUpdate);
 
 				// Another wait for the first install first run tiles to load
-				Device.StartTimer(TimeSpan.FromMilliseconds(700), () => {
+				Device.StartTimer(TimeSpan.FromMilliseconds(2000), () => {
 					// Initialize route first so that it will be the first in the layer list z-index = 0
 					initializeRoutesLayer();
 					addAllRoutes();
@@ -429,26 +429,27 @@ namespace MapBox.Android
 		/// <param name="pin">Pin.</param>
 		private void updatePins(Pin pin)
 		{
-			// The image is the type/class key
-			var key = pin.image;
-			// Find a source that has the same image as this pin
-			var bitmap = nMap.GetImage(key);
-			// Get all pins with the same key and same flat value
-			var pinsWithSimilarKey = xMap.pins.Where((Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat);
+            // The image is the type/class key
+            var key = pin.image;
+            // Find a source that has the same image as this pin
+            var bitmap = nMap.GetImage(key);
+            // Get all pins with the same key and same flat value
+            var pinsWithSimilarKey = xMap.pins.Where((Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat);
 
-			// Use the existing values in map
-			if (bitmap != null) {
-				GeoJsonSource geoJsonSource;
+            // Use the existing values in map
+            if (bitmap != null)
+            {
+                GeoJsonSource geoJsonSource;
 
-				// Edit the proper source
-				if (pin.IsCenterAndFlat)
-					geoJsonSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
-				else
-					geoJsonSource = (GeoJsonSource)nMap.GetSource(normalPinsSourceKey);
+                // Edit the proper source
+                if (pin.IsCenterAndFlat)
+                    geoJsonSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
+                else
+                    geoJsonSource = (GeoJsonSource)nMap.GetSource(normalPinsSourceKey);
 
-				// Refresh entire source when a pin is added to a specific source
-				geoJsonSource.SetGeoJson(pinsWithSimilarKey.toFeatureCollection());
-			}
+                // Refresh entire source when a pin is added to a specific source
+                geoJsonSource.SetGeoJson(pinsWithSimilarKey.toFeatureCollection());
+            }
 		}
 
 		/// <summary>
