@@ -146,8 +146,11 @@ namespace MapBox
 			set { SetValue(isVisibleProperty, value); }
 		}
 
-		string _id;
-		public string id { get { return string.IsNullOrEmpty(_id) ? string.Empty : _id; } set { _id = value; } }
+		private string _id;
+		public string id {
+			get { return string.IsNullOrEmpty(_id) ? string.Empty : _id; }
+			set { _id = value; }
+		}
 
 		internal Position previousPinPosition { get; set; }
 		internal bool hasUpdatedOnce { get; set; }

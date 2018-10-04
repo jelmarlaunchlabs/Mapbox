@@ -104,9 +104,9 @@ namespace MapBox.Android
 					nMap.CameraMove -= NMap_CameraMove;
 				}
 
-				removeAllPins();
+				removeAllPins(false);
 
-				removeAllRoutes();
+				removeAllRoutes(false);
 
 				// Unubscribe to changes in map bindable properties
 				map.PropertyChanged -= Map_PropertyChanged;
@@ -160,7 +160,7 @@ namespace MapBox.Android
 					updateMapPerspective(xMap.initialCameraUpdate);
 
 				// Another wait for the first install first run tiles to load
-				Device.StartTimer(TimeSpan.FromMilliseconds(700), () => {
+				Device.StartTimer(TimeSpan.FromMilliseconds(1000), () => {
 					// Initialize route first so that it will be the first in the layer list z-index = 0
 					initializeRoutesLayer();
 					addAllRoutes();
@@ -224,7 +224,8 @@ namespace MapBox.Android
 		#endregion
 
 		#region Post route initialization route operations
-		private void removeAllRoutes()
+		// Must be true if from new instance of collection
+		private void removeAllRoutes(bool isFromNewCollection)
 		{
 			if (xMap.routes == null)
 				return;
@@ -240,7 +241,8 @@ namespace MapBox.Android
 					route.PropertyChanged -= Route_PropertyChanged;
 				xMap.oldRoutes.CollectionChanged -= Routes_CollectionChanged;
 			}
-			xMap.routes.CollectionChanged += Routes_CollectionChanged;
+			if (isFromNewCollection)
+				xMap.routes.CollectionChanged += Routes_CollectionChanged;
 
 			// Subscribe new routes
 			foreach (var route in xMap.routes)
@@ -275,7 +277,7 @@ namespace MapBox.Android
 					updateRouteCollection();
 					break;
 				case NotifyCollectionChangedAction.Reset:
-					removeAllRoutes();
+					removeAllRoutes(false);
 					break;
 			}
 		}
@@ -364,7 +366,8 @@ namespace MapBox.Android
 		#endregion
 
 		#region Post pin initialization pin operations
-		private void removeAllPins()
+		// Must be true if from new instance of collection
+		private void removeAllPins(bool isFromNewCollection)
 		{
 			if (xMap.pins == null)
 				return;
@@ -384,7 +387,8 @@ namespace MapBox.Android
 					pin.PropertyChanged -= Pin_PropertyChanged;
 				xMap.oldPins.CollectionChanged -= Pins_CollectionChanged;
 			}
-			xMap.pins.CollectionChanged += Pins_CollectionChanged;
+			if (isFromNewCollection)
+				xMap.pins.CollectionChanged += Pins_CollectionChanged;
 
 			// Subcribe each new pin to change monitoring
 			foreach (var pin in xMap.pins)
@@ -425,28 +429,35 @@ namespace MapBox.Android
 		/// <param name="pin">Pin.</param>
 		private void updatePins(Pin pin)
 		{
-			// The image is the type/class key
-			var key = pin.image;
-			// Find a source that has the same image as this pin
-			var bitmap = nMap.GetImage(key);
-			// Get all pins with the same key and same flat value
-			var pinsWithSimilarKey = xMap.pins.Where((Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat);
+            // The image is the type/class key
+            var key = pin.image;
+            // Find a source that has the same image as this pin
+            var bitmap = nMap.GetImage(key);
+            // Get all pins with the same key and same flat value
+            var pinsWithSimilarKey = xMap.pins.Where((Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat);
 
-			// Use the existing values in map
-			if (bitmap != null) {
-				GeoJsonSource geoJsonSource;
+            // Use the existing values in map
+            if (bitmap != null)
+            {
+                GeoJsonSource geoJsonSource;
 
-				// Edit the proper source
-				if (pin.IsCenterAndFlat)
-					geoJsonSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
-				else
-					geoJsonSource = (GeoJsonSource)nMap.GetSource(normalPinsSourceKey);
+                // Edit the proper source
+                if (pin.IsCenterAndFlat)
+                    geoJsonSource = (GeoJsonSource)nMap.GetSource(mapLockedPinsSourceKey);
+                else
+                    geoJsonSource = (GeoJsonSource)nMap.GetSource(normalPinsSourceKey);
 
-				// Refresh entire source when a pin is added to a specific source
-				geoJsonSource.SetGeoJson(pinsWithSimilarKey.toFeatureCollection());
-			}
+                // Refresh entire source when a pin is added to a specific source
+                geoJsonSource.SetGeoJson(pinsWithSimilarKey.toFeatureCollection());
+            }
 		}
 
+		/// <summary>
+		/// This has a problem, if the same pin updates a couple of times a second pin might jump suddenly to the
+		/// 2nd to latest position then smooth animate to the latest position, but I think this is ok logically since
+		/// By the time it's animating its final animation position is not really up to date.
+		/// </summary>
+		/// <param name="pin">Pin.</param>
 		private void animateLocationChange(Pin pin)
 		{
 			#region Simultaneous pin update
@@ -456,7 +467,6 @@ namespace MapBox.Android
 					return;
 
 				// Wait for pin position assignment in the same call
-				await System.Threading.Tasks.Task.Delay(10);
 				isPinAnimating = true;
 
 				// Get all pins with the same key and same flat value (animatable pins)
@@ -468,13 +478,12 @@ namespace MapBox.Android
 
 					var visibleMovablePinCount = pinsWithSimilarKey.Count(p => p.isVisible);
 					var currentHeadingCollection = new double[visibleMovablePinCount];
+					var features = new Feature[visibleMovablePinCount];
 
 					// Update the entire frame
 					MapBox.Extensions.MapExtensions.animatePin(
 						(double d) => {
 							System.Threading.Tasks.Task.Run(() => {
-								var features = new List<Feature>();
-
 								for (int i = 0; i < visibleMovablePinCount; i++) {
 									var p = pinsWithSimilarKey[i];
 									Position theCurrentAnimationJump = p.position;
@@ -497,7 +506,7 @@ namespace MapBox.Android
 									feature.AddStringProperty(MapboxRenderer.pin_id_key, p.id);
 
 									// Add to the new animation frame
-									features.Add(feature);
+									features[i] = feature;
 								}
 
 								// Extension method bypass, fromFeatures accepts IList as parameter
@@ -507,13 +516,20 @@ namespace MapBox.Android
 								Device.BeginInvokeOnMainThread(() => geoJsonSource.SetGeoJson(featureCollection));
 							});
 						},
-						(d, b) => {
+						async (d, b) => {
+							// DO NOT REMOVE, this is essential for the simultaneous pin location update to work
+							await System.Threading.Tasks.Task.Delay(500);
+
 							isPinAnimating = false;
 
 							// Stabilize the pins, at this moment all the pins are updated
 							for (int i = 0; i < visibleMovablePinCount; i++) {
-								pinsWithSimilarKey[i].requestForUpdate = false;
-								pinsWithSimilarKey[i].heading = currentHeadingCollection[i];
+								var p = pinsWithSimilarKey[i];
+								// To avoid triggering heading property change event
+								p.PropertyChanged -= Pin_PropertyChanged;
+								p.requestForUpdate = false;
+								p.heading = currentHeadingCollection[i];
+								p.PropertyChanged += Pin_PropertyChanged;
 							}
 						}, 500);
 				});
@@ -527,9 +543,9 @@ namespace MapBox.Android
 		{
 			if (e.PropertyName == XMapbox.Map.pinsProperty.PropertyName)
 				// The entire pins collection itself has been changed
-				removeAllPins();
+				removeAllPins(true);
 			else if (e.PropertyName == XMapbox.Map.routesProperty.PropertyName)
-				removeAllRoutes();
+				removeAllRoutes(true);
 			if (e.PropertyName == Map.DefaultPinsProperty.PropertyName) {
 				if (xMap.oldDefaultPins != null)
 					xMap.oldDefaultPins.CollectionChanged -= DefaultPins_CollectionChanged;
@@ -555,7 +571,7 @@ namespace MapBox.Android
 					}
 					break;
 				case NotifyCollectionChangedAction.Reset:
-					removeAllPins();
+					removeAllPins(false);
 					break;
 			}
 		}

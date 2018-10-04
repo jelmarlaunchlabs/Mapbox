@@ -19,7 +19,7 @@ namespace MapboxTester
 		{
 			InitializeComponent();
 
-			map.initialCameraUpdate = CameraPerspectiveFactory.fromCenterAndZoomLevel(new Position(10.309852, 123.893151), 10);
+			//map.initialCameraUpdate = CameraPerspectiveFactory.fromCenterAndZoomLevel(new Position(10.309852, 123.893151), 10);
 
 			map.pins.Add(new Pin {
 				id = "1",
@@ -47,6 +47,40 @@ namespace MapboxTester
 				IsCenterAndFlat = true,
 				heading = 0,
 				position = new Position(10.311782, 123.91805)
+			});
+
+			bool flag = true;
+
+			Device.StartTimer(TimeSpan.FromSeconds(3), () => {
+				map.pins.Clear();
+
+				map.pins.Add(new Pin {
+					image = "Resources.car.png",
+					IsCenterAndFlat = false,
+					position = new Position(0, 0)
+				});
+				map.pins.Add(new Pin {
+					image = "Resources.car.png",
+					IsCenterAndFlat = false,
+					position = new Position(flag ? 20 : -20, flag ? 20 : -20)
+				});
+
+				map.routes.Clear();
+				var points = new ObservableCollection<Position>();
+				if (flag)
+					for (int i = 0; i < 20; i++) {
+						points.Add(new Position(i, i));
+					} else
+					for (int i = 0; i > -20; i--) {
+						points.Add(new Position(i, i));
+					}
+				map.routes.Add(
+					new Route {
+						points = points
+					});
+
+				flag = !flag;
+				return true;
 			});
 
 			//Device.StartTimer(TimeSpan.FromSeconds(10), () => {

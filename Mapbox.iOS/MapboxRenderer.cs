@@ -83,9 +83,9 @@ namespace Mapbox.iOS
 				if (map.routes != null)
 					map.routes.CollectionChanged -= Routes_CollectionChanged;
 
-				removeAllPins();
+				removeAllPins(false);
 
-				removeAllRoutes();
+				removeAllRoutes(false);
 
 				// Unubscribe to changes in map bindable properties
 				map.PropertyChanged -= Map_PropertyChanged;
@@ -179,7 +179,8 @@ namespace Mapbox.iOS
 		#endregion
 
 		#region Post route initialization route operations
-		private void removeAllRoutes()
+		// Must be true if from new instance of collection
+		private void removeAllRoutes(bool isFromNewCollection)
 		{
 			if (xMap.routes == null)
 				return;
@@ -195,7 +196,8 @@ namespace Mapbox.iOS
 					route.PropertyChanged -= Route_PropertyChanged;
 				xMap.oldRoutes.CollectionChanged -= Routes_CollectionChanged;
 			}
-			xMap.routes.CollectionChanged += Routes_CollectionChanged;
+			if (isFromNewCollection)
+				xMap.routes.CollectionChanged += Routes_CollectionChanged;
 
 			// Subscribe new routes
 			foreach (var route in xMap.routes)
@@ -230,7 +232,7 @@ namespace Mapbox.iOS
 					updateRouteCollection();
 					break;
 				case NotifyCollectionChangedAction.Reset:
-					removeAllRoutes();
+					removeAllRoutes(false);
 					break;
 			}
 		}
@@ -322,7 +324,8 @@ namespace Mapbox.iOS
 		#endregion
 
 		#region Post pin initialization pin operations
-		private void removeAllPins()
+		// Must be true if from new instance of collection
+		private void removeAllPins(bool isFromNewCollection)
 		{
 			if (xMap.pins == null)
 				return;
@@ -344,7 +347,8 @@ namespace Mapbox.iOS
 					pin.PropertyChanged -= Pin_PropertyChanged;
 				xMap.oldPins.CollectionChanged -= Pins_CollectionChanged;
 			}
-			xMap.pins.CollectionChanged += Pins_CollectionChanged;
+			if (isFromNewCollection)
+				xMap.pins.CollectionChanged += Pins_CollectionChanged;
 
 			// Subcribe each new pin to change monitoring
 			foreach (var pin in xMap.pins)
@@ -403,6 +407,12 @@ namespace Mapbox.iOS
 			}
 		}
 
+		/// <summary>
+		/// This has a problem, if the same pin updates a couple of times a second pin might jump suddenly to the
+		/// 2nd to latest position then smooth animate to the latest position, but I think this is ok logically since
+		/// By the time it's animating its final animation position is not really up to date.
+		/// </summary>
+		/// <param name="pin">Pin.</param>
 		private void animateLocationChange(Pin pin)
 		{
 			#region Simultaneous pin update
@@ -411,8 +421,7 @@ namespace Mapbox.iOS
 				if (isPinAnimating)
 					return;
 
-				// Wait for pin position assignment in the same call
-				await System.Threading.Tasks.Task.Delay(10);
+				//// Wait for pin position assignment in the same call
 				isPinAnimating = true;
 
 				// Get all pins with the same key and same flat value (animatable pins)
@@ -424,13 +433,12 @@ namespace Mapbox.iOS
 
 					var visibleMovablePinCount = pinsWithSimilarKey.Count(p => p.isVisible);
 					var currentHeadingCollection = new double[visibleMovablePinCount];
+					var features = new NSObject[visibleMovablePinCount];
 
 					// Update the entire frame
 					MapBox.Extensions.MapExtensions.animatePin(
 						(double d) => {
 							System.Threading.Tasks.Task.Run(() => {
-								var features = new List<NSObject>();
-
 								for (int i = 0; i < visibleMovablePinCount; i++) {
 									var p = pinsWithSimilarKey[i];
 									Position theCurrentAnimationJump = p.position;
@@ -463,20 +471,27 @@ namespace Mapbox.iOS
 										});
 
 									// Add to the new animation frame
-									features.Add(feature);
+									features[i] = feature;
 								}
 
 								// Update the entire layer
-								Device.BeginInvokeOnMainThread(() => geoJsonSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(features.toShapeSourceArray()));
+								Device.BeginInvokeOnMainThread(() => geoJsonSource.Shape = MGLShapeCollectionFeature.ShapeCollectionWithShapes(features));
 							});
 						},
-						(d, b) => {
+						async (d, b) => {
+							// DO NOT REMOVE, this is essential for the simultaneous pin location update to work
+							await System.Threading.Tasks.Task.Delay(500);
+
 							isPinAnimating = false;
 
 							// Stabilize the pins, at this moment all the pins are updated
 							for (int i = 0; i < visibleMovablePinCount; i++) {
-								pinsWithSimilarKey[i].requestForUpdate = false;
-								pinsWithSimilarKey[i].heading = currentHeadingCollection[i];
+								var p = pinsWithSimilarKey[i];
+								// To avoid triggering heading property change event
+								p.PropertyChanged -= Pin_PropertyChanged;
+								p.requestForUpdate = false;
+								p.heading = currentHeadingCollection[i];
+								p.PropertyChanged += Pin_PropertyChanged;
 							}
 						}, 500);
 				});
@@ -490,9 +505,9 @@ namespace Mapbox.iOS
 		{
 			// The entire pins collection itself has been changed
 			if (e.PropertyName == Map.pinsProperty.PropertyName)
-				removeAllPins();
+				removeAllPins(true);
 			if (e.PropertyName == Map.routesProperty.PropertyName)
-				removeAllRoutes();
+				removeAllRoutes(true);
 			if (e.PropertyName == Map.DefaultPinsProperty.PropertyName) {
 				if (xMap.oldDefaultPins != null)
 					xMap.oldDefaultPins.CollectionChanged -= DefaultPins_CollectionChanged;
@@ -518,7 +533,7 @@ namespace Mapbox.iOS
 					}
 					break;
 				case NotifyCollectionChangedAction.Reset:
-					removeAllPins();
+					removeAllPins(false);
 					break;
 			}
 		}
