@@ -160,7 +160,7 @@ namespace MapBox.Android
 					updateMapPerspective(xMap.initialCameraUpdate);
 
 				// Another wait for the first install first run tiles to load
-				Device.StartTimer(TimeSpan.FromMilliseconds(1000), () => {
+				Device.StartTimer(TimeSpan.FromMilliseconds(2000), () => {
 					// Initialize route first so that it will be the first in the layer list z-index = 0
 					initializeRoutesLayer();
 					addAllRoutes();
