@@ -405,7 +405,8 @@ namespace Mapbox.iOS
 
 		/// <summary>
 		/// This has a problem, if the same pin updates a couple of times a second pin might jump suddenly to the
-		/// 2nd to latest position then smooth animate to the latest position
+		/// 2nd to latest position then smooth animate to the latest position, but I think this is ok logically since
+		/// By the time it's animating its final animation position is not really up to date.
 		/// </summary>
 		/// <param name="pin">Pin.</param>
 		private void animateLocationChange(Pin pin)
