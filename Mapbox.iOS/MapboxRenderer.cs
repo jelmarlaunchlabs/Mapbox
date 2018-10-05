@@ -71,7 +71,7 @@ namespace Mapbox.iOS
 			}
 			if (e.OldElement != null) {
 				// Unsubscribe
-				var map = e.NewElement;
+                var map = e.OldElement;
 
 				// Unsubscribe to changes in the collection first
 				if (map.pins != null)
