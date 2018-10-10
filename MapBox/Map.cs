@@ -180,6 +180,7 @@ namespace MapBox
 
 		#region Offline
 		/// <summary>
+		/// NOTE: Need to invoke in main thread on iOS
 		/// https://www.mapbox.com/help/mobile-offline/#requirements
 		/// </summary>
 		/// <param name="name">Name.</param>
@@ -228,6 +229,11 @@ namespace MapBox
 			});
 		}
 
+		/// <summary>
+		/// NOTE: Needs to be invoked on the main thread on iOS.
+		/// </summary>
+		/// <returns>The map pack.</returns>
+		/// <param name="name">Name.</param>
 		public async Task<bool> hasMapPack(string name)
 		{
 			var packs = await offlineService.GetPacks();
