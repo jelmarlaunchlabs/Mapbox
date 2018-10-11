@@ -28,6 +28,7 @@ namespace MapBox
 		#region Internal properties
 		internal const string mapStyle = "mapbox://styles/mapbox/streets-v9";
 		internal Assembly callerAssembly { get; set; }
+		internal int mainThreadID;
 		internal ObservableCollection<Pin> oldPins { get; set; }
 		internal ObservableCollection<Route> oldRoutes { get; set; }
 		internal ObservableCollection<DefaultPin> oldDefaultPins { get; set; }
@@ -133,6 +134,7 @@ namespace MapBox
 		public Map()
 		{
 			callerAssembly = Assembly.GetCallingAssembly();
+			mainThreadID = Environment.CurrentManagedThreadId;
 			this.pins = new ObservableCollection<Pin>();
 			this.routes = new ObservableCollection<Route>();
 			offlineService.OfflinePackProgressChanged += OfflineService_OfflinePackProgressChanged;
@@ -189,7 +191,7 @@ namespace MapBox
 		/// <param name="bounds">Bounds - the geographic bounding box.</param>
 		public void dowloadMap(string name, double minimumZoomLevel, double maximumZoomLevel, Bounds bounds)
 		{
-			Task.Run(async () => {
+			Device.BeginInvokeOnMainThread(async () => {
 				var packs = await offlineService.GetPacks();
 				if (packs != null && packs.Any(p => p.Info.ContainsValue(name))) {
 					Debug.WriteLine("A pack with the same name/key already exist");
@@ -218,13 +220,11 @@ namespace MapBox
 
 		public void loadMapPack(string name)
 		{
-			Task.Run(async () => {
+			Device.BeginInvokeOnMainThread(async () => {
 				var packs = await offlineService.GetPacks();
 				if (packs != null && packs.Length > 0) {
 					var pack = packs.FirstOrDefault(p => p.Info.ContainsValue(name));
-					Device.BeginInvokeOnMainThread(() => {
-						this.moveMapToRegion(Factory.CameraPerspectiveFactory.fromCoordinates(pack.Region.Bounds.Center));
-					});
+					this.moveMapToRegion(Factory.CameraPerspectiveFactory.fromCoordinates(pack.Region.Bounds.Center));
 				}
 			});
 		}
@@ -236,6 +236,12 @@ namespace MapBox
 		/// <param name="name">Name.</param>
 		public async Task<bool> hasMapPack(string name)
 		{
+			if (Environment.CurrentManagedThreadId != mainThreadID) {
+				var message = $"WARNING: {nameof(hasMapPack)} must be called in the main thread.";
+				Debug.WriteLine(message);
+				throw new Exception(message); // Somehow the app does not break at this point
+			}
+
 			var packs = await offlineService.GetPacks();
 			if (packs == null)
 				return false;
@@ -244,7 +250,7 @@ namespace MapBox
 
 		public void clearOfflineMapPacks()
 		{
-			Task.Run(async () => {
+			Device.BeginInvokeOnMainThread(async () => {
 				var packs = await offlineService.GetPacks();
 				if (packs != null)
 					foreach (var pack in packs)
@@ -265,6 +271,5 @@ namespace MapBox
 				Debug.WriteLine("Download completed");
 		}
 		#endregion
-
 	}
 }
