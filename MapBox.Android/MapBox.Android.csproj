@@ -19,7 +19,7 @@
     <AndroidUseLatestPlatformSdk>true</AndroidUseLatestPlatformSdk>
     <PackOnBuild>true</PackOnBuild>
     <PackageId>Mapbox.Mapcontrol.Android</PackageId>
-    <PackageVersion>1.0</PackageVersion>
+    <PackageVersion>1.0.0.1</PackageVersion>
     <Authors>Jelmar and Stephen</Authors>
     <Description>This is the Android counterpart for the Mapbox.Mapcontrol.Forms version.</Description>
   </PropertyGroup>
