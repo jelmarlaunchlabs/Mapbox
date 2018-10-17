@@ -29,7 +29,7 @@ using MapBox.Helpers;
 [assembly: ExportRenderer(typeof(MapBox.Map), typeof(MapBox.Android.MapboxRenderer))]
 namespace MapBox.Android
 {
-	public partial class MapboxRenderer : ViewRenderer<Map, NView>, IOnMapReadyCallback, MapboxMap.IOnMapClickListener, IMapFunctions
+	public partial class MapboxRenderer : ViewRenderer<Map, NView>, IOnMapReadyCallback, MapboxMap.IOnMapClickListener, IMapFunctions, MapboxMap.IOnStyleLoadedListener
 	{
 		#region Pin constants
 		public const string mapLockedPinsKey = nameof(mapLockedPinsKey);
@@ -65,7 +65,7 @@ namespace MapBox.Android
 		private XMapbox.Map xMap;
 		private bool isPinAnimating;
 
-		public static void init(Context context, string accessToken)
+        public static void init(Context context, string accessToken)
 		{
 			// Initialize the token
 			Com.Mapbox.Mapboxsdk.Mapbox.GetInstance(context, accessToken);
@@ -141,50 +141,23 @@ namespace MapBox.Android
 		public void OnMapReady(MapboxMap mapBox)
 		{
 			nMap = mapBox;
-			nMap.SetStyle(Map.mapStyle);
+            //nMap.SetStyle(Map.mapStyle);
+            nMap.SetStyle(Map.mapStyle, this);
 			//nMap.SetStyle("mapbox://styles/mapbox/light-v9");
-			nMap.UiSettings.CompassEnabled = false;
-			nMap.AddOnMapClickListener(this);
-			nMap.CameraIdle += NMap_CameraIdle;
-			nMap.CameraMoveStarted += NMap_CameraMoveStarted;
-			nMap.CameraMove += NMap_CameraMove;
+            nMap.UiSettings.CompassEnabled = false;
+            nMap.AddOnMapClickListener(this);
+            nMap.CameraIdle += NMap_CameraIdle;
+            nMap.CameraMoveStarted += NMap_CameraMoveStarted;
+            nMap.CameraMove += NMap_CameraMove;
 
-			// This will make sure the map is FULLY LOADED and not just ready this is to support on-run highly customized pins
-			// Because it will not load pins/polylines if the operation is executed immediately e.g. (xMap == null)
-			Device.StartTimer(TimeSpan.FromMilliseconds(25), () => {
-				// If cross map has not been assigned a value yet the retry initializations in the next x millisecond
-				if (xMap == null)
-					return true;
+            // If cross map has not been assigned a value yet the retry initializations in the next x millisecond
+            if (xMap == null)
+                return;
 
-				if (xMap.initialCameraUpdate != null)
-					updateMapPerspective(xMap.initialCameraUpdate);
-
-				// Another wait for the first install first run tiles to load
-				Device.StartTimer(TimeSpan.FromMilliseconds(2000), () => {
-					// Initialize route first so that it will be the first in the layer list z-index = 0
-					initializeRoutesLayer();
-					addAllRoutes();
-
-					// Add all pin first
-					initializePinsLayer();
-					addAllReusablePinImages();
-					addAllPins();
-
-					// Then subscribe to pins added
-					if (xMap.pins != null)
-						xMap.pins.CollectionChanged += Pins_CollectionChanged;
-					if (xMap.DefaultPins != null)
-						xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
-
-					if (xMap.routes != null)
-						xMap.routes.CollectionChanged += Routes_CollectionChanged;
-
-					// Subscribe to changes in map bindable properties after all pins are loaded
-					xMap.PropertyChanged += Map_PropertyChanged;
-					return false;
-				});
-				return false;
-			});
+            if (xMap.initialCameraUpdate != null)
+                updateMapPerspective(xMap.initialCameraUpdate);
+            
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff tt") + "[MapboxRenderer]: Ready Ready Ready Ready Ready");
 		}
 
 		#region Route initializers
@@ -699,5 +672,31 @@ namespace MapBox.Android
 				}
 			}
 		}
-	}
+
+        public void OnStyleLoaded(string p0)
+        {
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff tt") + "[MapboxRenderer]: Loaded Loaded Loaded Loaded Loaded - " + p0);
+
+            // Initialize route first so that it will be the first in the layer list z-index = 0
+            initializeRoutesLayer();
+            addAllRoutes();
+
+            // Add all pin first
+            initializePinsLayer();
+            addAllReusablePinImages();
+            addAllPins();
+
+            // Then subscribe to pins added
+            if (xMap.pins != null)
+                xMap.pins.CollectionChanged += Pins_CollectionChanged;
+            if (xMap.DefaultPins != null)
+                xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
+
+            if (xMap.routes != null)
+                xMap.routes.CollectionChanged += Routes_CollectionChanged;
+
+            // Subscribe to changes in map bindable properties after all pins are loaded
+            xMap.PropertyChanged += Map_PropertyChanged;
+        }
+    }
 }
