@@ -121,6 +121,7 @@ namespace MapBox.Android
 			}
 		}
 
+		#region Map initializers
 		private void initializeControl()
 		{
 			var activity = (AppCompatActivity)Context;
@@ -141,24 +142,50 @@ namespace MapBox.Android
 		public void OnMapReady(MapboxMap mapBox)
 		{
 			nMap = mapBox;
-            //nMap.SetStyle(Map.mapStyle);
-            nMap.SetStyle(Map.mapStyle, this);
+			nMap.SetStyle(Map.mapStyle, this);
 			//nMap.SetStyle("mapbox://styles/mapbox/light-v9");
-            nMap.UiSettings.CompassEnabled = false;
-            nMap.AddOnMapClickListener(this);
-            nMap.CameraIdle += NMap_CameraIdle;
-            nMap.CameraMoveStarted += NMap_CameraMoveStarted;
-            nMap.CameraMove += NMap_CameraMove;
+			nMap.UiSettings.CompassEnabled = false;
+			nMap.AddOnMapClickListener(this);
+			nMap.CameraIdle += NMap_CameraIdle;
+			nMap.CameraMoveStarted += NMap_CameraMoveStarted;
+			nMap.CameraMove += NMap_CameraMove;
 
-            // If cross map has not been assigned a value yet the retry initializations in the next x millisecond
-            if (xMap == null)
-                return;
+			// If cross map has not been assigned a value yet the retry initializations in the next x millisecond
+			if (xMap == null)
+				return;
 
-            if (xMap.initialCameraUpdate != null)
-                updateMapPerspective(xMap.initialCameraUpdate);
-            
-            System.Diagnostics.Debug.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff tt") + "[MapboxRenderer]: Ready Ready Ready Ready Ready");
+			if (xMap.initialCameraUpdate != null)
+				updateMapPerspective(xMap.initialCameraUpdate);
+
+			System.Diagnostics.Debug.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff tt") + "[MapboxRenderer]: Ready Ready Ready Ready Ready");
 		}
+
+		public void OnStyleLoaded(string p0)
+		{
+			System.Diagnostics.Debug.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff tt") + "[MapboxRenderer]: Loaded Loaded Loaded Loaded Loaded - " + p0);
+
+			// Initialize route first so that it will be the first in the layer list z-index = 0
+			initializeRoutesLayer();
+			addAllRoutes();
+
+			// Add all pin first
+			initializePinsLayer();
+			addAllReusablePinImages();
+			addAllPins();
+
+			// Then subscribe to pins added
+			if (xMap.pins != null)
+				xMap.pins.CollectionChanged += Pins_CollectionChanged;
+			if (xMap.DefaultPins != null)
+				xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
+
+			if (xMap.routes != null)
+				xMap.routes.CollectionChanged += Routes_CollectionChanged;
+
+			// Subscribe to changes in map bindable properties after all pins are loaded
+			xMap.PropertyChanged += Map_PropertyChanged;
+		}
+		#endregion
 
 		#region Route initializers
 		private void initializeRoutesLayer()
@@ -672,31 +699,5 @@ namespace MapBox.Android
 				}
 			}
 		}
-
-        public void OnStyleLoaded(string p0)
-        {
-            System.Diagnostics.Debug.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff tt") + "[MapboxRenderer]: Loaded Loaded Loaded Loaded Loaded - " + p0);
-
-            // Initialize route first so that it will be the first in the layer list z-index = 0
-            initializeRoutesLayer();
-            addAllRoutes();
-
-            // Add all pin first
-            initializePinsLayer();
-            addAllReusablePinImages();
-            addAllPins();
-
-            // Then subscribe to pins added
-            if (xMap.pins != null)
-                xMap.pins.CollectionChanged += Pins_CollectionChanged;
-            if (xMap.DefaultPins != null)
-                xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
-
-            if (xMap.routes != null)
-                xMap.routes.CollectionChanged += Routes_CollectionChanged;
-
-            // Subscribe to changes in map bindable properties after all pins are loaded
-            xMap.PropertyChanged += Map_PropertyChanged;
-        }
     }
 }
