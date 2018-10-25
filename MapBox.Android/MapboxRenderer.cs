@@ -64,9 +64,11 @@ namespace MapBox.Android
 		private MapboxMap nMap;
 		private XMapbox.Map xMap;
 		private bool isPinAnimating;
+        static Context _context;
 
         public static void init(Context context, string accessToken)
 		{
+            _context = context;
 			// Initialize the token
 			Com.Mapbox.Mapboxsdk.Mapbox.GetInstance(context, accessToken);
 			Map.offlineService = DependencyService.Get<XMapbox.Offline.IOfflineStorageService>();
@@ -74,6 +76,7 @@ namespace MapBox.Android
 
 		public MapboxRenderer(Context context) : base(context)
 		{
+            
 		}
 
 		protected override void OnElementChanged(ElementChangedEventArgs<Map> e)
@@ -326,15 +329,23 @@ namespace MapBox.Android
 				return;
 
 			foreach (var pin in xMap.pins) {
-				var bitmap = nMap.GetImage(pin.image);
+				var bitmap = nMap.GetImage(pin.GetStringImage());
 
 				// If any existing item does not yet exist
 				if (bitmap == null) {
-					// Then add new image
-					using (var stream = pin.image.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.width, pin.height)) {
-						var newBitmap = BitmapFactory.DecodeStream(stream);
-						nMap.AddImage(pin.image, newBitmap);
-					}
+                    switch (pin.icon.Type)
+                    {
+                        case PinImageDescriptorType.Bundle:
+                            var imageBitmap = _context.Resources.GetBitmap(pin.icon.FileName);
+                            nMap.AddImage(pin.icon.FileName, imageBitmap);
+                            break;
+                        case PinImageDescriptorType.Path:
+                            using (var stream = pin.icon.FilePath.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.icon.Width, pin.icon.Height)) {
+                                var newBitmap = BitmapFactory.DecodeStream(stream);
+                                nMap.AddImage(pin.icon.FilePath, newBitmap);
+                            }
+                            break;
+                    }
 				}
 			}
 		}
@@ -399,7 +410,7 @@ namespace MapBox.Android
 		{
 			// Search for the existing image first
 			// The image is the type/class key
-			var key = pin.image;
+			var key = pin.GetStringImage();
 			// Find a source that has the same image as this pin
 			var bitmap = nMap.GetImage(key);
 
@@ -412,13 +423,20 @@ namespace MapBox.Android
 				updatePins(pin);
 			else {
 				// Otherwise add new
-
-				// New image
-				using (var stream = key.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.width, pin.height)) {
-					var newBitmap = BitmapFactory.DecodeStream(stream);
-					nMap.AddImage(key, newBitmap);
-				}
-
+                switch(pin.icon.Type)
+                {
+                    case PinImageDescriptorType.Bundle:
+                        var imageBitmap = _context.Resources.GetBitmap(pin.icon.FileName);
+                        nMap.AddImage(key, imageBitmap);
+                        break;
+                    case PinImageDescriptorType.Path:
+                        using (var stream = key.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.icon.Width, pin.icon.Height)) {
+                            var newBitmap = BitmapFactory.DecodeStream(stream);
+                            nMap.AddImage(key, newBitmap);
+                        }
+                        break;
+                }
+				
 				updatePins(pin);
 			}
 		}
@@ -430,7 +448,7 @@ namespace MapBox.Android
 		private void updatePins(Pin pin)
 		{
             // The image is the type/class key
-            var key = pin.image;
+            var key = pin.GetStringImage();
             // Find a source that has the same image as this pin
             var bitmap = nMap.GetImage(key);
             // Get all pins with the same key and same flat value
@@ -500,7 +518,7 @@ namespace MapBox.Android
 									var feature = Feature.FromGeometry(
 										Com.Mapbox.Geojson.Point.FromLngLat(theCurrentAnimationJump.longitude,
 																			theCurrentAnimationJump.latitude));
-									feature.AddStringProperty(MapboxRenderer.pin_image_key, p.image);
+									feature.AddStringProperty(MapboxRenderer.pin_image_key, p.GetStringImage());
 									feature.AddNumberProperty(MapboxRenderer.pin_rotation_key, (Java.Lang.Number)theCurrentHeading);
 									feature.AddNumberProperty(MapboxRenderer.pin_size_key, (Java.Lang.Number)p.imageScaleFactor);
 									feature.AddStringProperty(MapboxRenderer.pin_id_key, p.id);
@@ -584,7 +602,7 @@ namespace MapBox.Android
 					animateLocationChange(pin);
 				else
 					updatePins(pin);
-			} else if (e.PropertyName == Pin.imageProperty.PropertyName)
+			} else if (e.PropertyName == Pin.iconProperty.PropertyName)
 				addPin(pin); // This is really addPin because it's uniqe implementation allows it to refresh the entire layer where this pin should belong.
 			else if (e.PropertyName == Pin.headingProperty.PropertyName ||
 				     e.PropertyName == Pin.iconOffsetProperty.PropertyName ||

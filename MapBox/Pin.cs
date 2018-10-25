@@ -11,16 +11,17 @@ namespace MapBox
 	/// </summary>
 	public class Pin : BindableObject
 	{
-		public static readonly BindableProperty imageProperty = BindableProperty.Create(
-			nameof(image),
-			typeof(string),
-			typeof(Pin),
-			default(string),
-			BindingMode.OneWay);
-		public string image {
-			get { return (string)GetValue(imageProperty); }
-			set { SetValue(imageProperty, value); }
-		}
+		public static readonly BindableProperty iconProperty = BindableProperty.Create(
+            nameof(icon),
+            typeof(PinImageDescriptor),
+            typeof(Pin),
+            default(PinImageDescriptor),
+            BindingMode.OneWay);
+        public PinImageDescriptor icon
+        {
+            get { return (PinImageDescriptor)GetValue(iconProperty); }
+            set { SetValue(iconProperty, value); }
+        }
 
 		public static readonly BindableProperty IsCenterAndFlatProperty = BindableProperty.Create(
 			nameof(IsCenterAndFlat),
@@ -47,38 +48,6 @@ namespace MapBox
 		public double heading {
 			get { return (double)GetValue(headingProperty); }
 			set { SetValue(headingProperty, value); }
-		}
-
-		public static readonly BindableProperty widthProperty = BindableProperty.Create(
-			nameof(width),
-			typeof(double),
-			typeof(Pin),
-			(double)50,
-			BindingMode.OneWay);
-		/// <summary>
-		/// Note this is the base image width, the final width will be decided by setting the factor
-		/// The width is already scaled!!!
-		/// </summary>
-		/// <value>The width.</value>
-		public double width {
-			get { return (double)GetValue(widthProperty); }
-			set { SetValue(widthProperty, value); }
-		}
-
-		public static readonly BindableProperty heightProperty = BindableProperty.Create(
-			nameof(height),
-			typeof(double),
-			typeof(Pin),
-			(double)50,
-			BindingMode.OneWay);
-		/// <summary>
-		/// Note this is the base image height, the final height will be decided by setting the factor
-		/// The height is already scaled!!!
-		/// </summary>
-		/// <value>The height.</value>
-		public double height {
-			get { return (double)GetValue(heightProperty); }
-			set { SetValue(heightProperty, value); }
 		}
 
 		public static readonly BindableProperty imageScaleFactorProperty = BindableProperty.Create(

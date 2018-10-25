@@ -11,7 +11,18 @@ namespace Mapbox.iOS.DependencyService
 	{
 		public double getHeight()
 		{
-			return UIDevice.CurrentDevice.CheckSystemVersion(11, 0) ? 667 : (float)UIScreen.MainScreen.Bounds.Height;
+            var screenHeight = (float)UIScreen.MainScreen.Bounds.Height;
+
+            UIWindow w = new UIWindow();
+            if (UIDevice.CurrentDevice.CheckSystemVersion(11, 0))
+            {
+                if (w.SafeAreaInsets.Top > 0 && w.SafeAreaInsets.Bottom > 0)
+                {
+                    screenHeight = 667.0f;
+                }
+            }
+
+            return screenHeight;
 		}
 
 		public double getNativeScale()
