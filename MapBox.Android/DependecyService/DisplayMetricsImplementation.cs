@@ -14,7 +14,16 @@ namespace MapBox.Android.DependecyService
 		public double getHeight()
 		{
 			var nativeScale = getNativeScale();
-			return context.Resources.DisplayMetrics.HeightPixels / nativeScale;
+			
+            var screenHeight = context.Resources.DisplayMetrics.HeightPixels / nativeScale;
+
+            int resourceId = context.Resources.GetIdentifier("status_bar_height", "dimen", "android");
+            if (resourceId > 0)
+            {
+                screenHeight = screenHeight - (context.Resources.GetDimensionPixelSize(resourceId) / nativeScale);
+            }
+
+            return screenHeight;
 		}
 
 		public double getNativeScale()

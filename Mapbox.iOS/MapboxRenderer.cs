@@ -283,17 +283,25 @@ namespace Mapbox.iOS
 				return;
 
 			foreach (var pin in xMap.pins) {
-				var uiImage = nStyle.ImageForName(pin.image);
-
+				var uiImage = nStyle.ImageForName(pin.GetStringImage());
+                UIImage newUIImage;
 				// If any existing item does not yet exist
 				if (uiImage == null) {
-					// Then add new image
-					using (var stream = pin.image.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.width, pin.height)) {
-						using (var imageData = NSData.FromStream(stream)) {
-							var newUIImage = UIImage.LoadFromData(imageData);
-							nStyle.SetImage(newUIImage, pin.image);
-						}
-					}
+                    switch (pin.icon.Type)
+                    {
+                        case PinImageDescriptorType.Bundle:
+                            newUIImage = UIImage.FromBundle(pin.icon.FileName);
+                            nStyle.SetImage(newUIImage, pin.icon.FileName);
+                            break;
+                        case PinImageDescriptorType.Path:
+                            using (var stream = pin.icon.FilePath.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.icon.Width, pin.icon.Height)) {
+                                using (var imageData = NSData.FromStream(stream)) {
+                                    newUIImage = UIImage.LoadFromData(imageData);
+                                    nStyle.SetImage(newUIImage, pin.icon.FilePath);
+                                }
+                            }
+                            break;
+                    }
 				}
 			}
 		}
@@ -357,10 +365,10 @@ namespace Mapbox.iOS
 
 		private void addPin(Pin pin)
 		{
-			// Search for the existing image first
-			// The image is the type/class key
-			var key = pin.image;
-			// Find a source that has the same image as this pin
+            // Search for the existing image first
+            // The image is the type/class key
+            string key = pin.GetStringImage();
+            // Find a source that has the same image as this pin
 			var uiImage = nStyle.ImageForName(key);
 			// Get all pins with the same flat value
 			var pinsWithSimilarKey = xMap.pins.Where((Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat);
@@ -369,15 +377,23 @@ namespace Mapbox.iOS
 			if (uiImage != null)
 				updatePins(pin);
 			else {
-				// Otherwise add new
-
-				//New image
-				using (var stream = pin.image.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.width, pin.height)) {
-					using (var imageData = NSData.FromStream(stream)) {
-						var newUIImage = UIImage.LoadFromData(imageData);
-						nStyle.SetImage(newUIImage, key);
-					}
-				}
+                // Otherwise add new
+                UIImage newUIImage;
+                switch (pin.icon.Type)
+                {
+                    case PinImageDescriptorType.Bundle:
+                        newUIImage = UIImage.FromBundle(pin.icon.FileName);
+                        nStyle.SetImage(newUIImage, pin.icon.FileName);
+                        break;
+                    case PinImageDescriptorType.Path:
+                        using (var stream = pin.icon.FilePath.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.icon.Width, pin.icon.Height)) {
+                            using (var imageData = NSData.FromStream(stream)) {
+                                newUIImage = UIImage.LoadFromData(imageData);
+                                nStyle.SetImage(newUIImage, key);
+                            }
+                        }
+                        break;
+                }
 
 				updatePins(pin);
 			}
@@ -386,8 +402,8 @@ namespace Mapbox.iOS
 		private void updatePins(Pin pin)
 		{
 			// The image is the type/class key
-			var key = pin.image;
-			// Find a source that has the same image as this pin
+			string key = pin.GetStringImage();
+            // Find a source that has the same image as this pin
 			var uiImage = nStyle.ImageForName(key);
 			// Get all pins with the same flat value
 			var pinsWithSimilarKey = xMap.pins.Where((Pin arg) => arg.IsCenterAndFlat == pin.IsCenterAndFlat);
@@ -458,7 +474,7 @@ namespace Mapbox.iOS
 									};
 									feature.Attributes = NSDictionary<NSString, NSObject>.FromObjectsAndKeys(
 										new object[] {
-												p.image,
+                                                p.GetStringImage(),
 												theCurrentHeading,
 												p.imageScaleFactor,
 												p.id
@@ -546,7 +562,7 @@ namespace Mapbox.iOS
 					animateLocationChange(pin);
 				else
 					updatePins(pin);
-			} else if (e.PropertyName == Pin.imageProperty.PropertyName)
+			} else if (e.PropertyName == Pin.iconProperty.PropertyName)
 				addPin(pin); // This is really addPin because it's uniqe implementation allows it to refresh the entire layer where this pin should belong.
 			else if (e.PropertyName == Pin.headingProperty.PropertyName ||
 				     e.PropertyName == Pin.iconOffsetProperty.PropertyName ||

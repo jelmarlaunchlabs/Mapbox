@@ -88,7 +88,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MapBox\MapBox.csproj">
-      <Project>{4AA9B80E-1180-4ACB-A401-7202CD3799BD}</Project>
+      <Project>{786FA003-13D3-4326-B3E3-58D76CEF1896}</Project>
       <Name>MapBox</Name>
     </ProjectReference>
   </ItemGroup>
