@@ -11,16 +11,16 @@ namespace MapBox
 	/// </summary>
 	public class Pin : BindableObject
 	{
-		public static readonly BindableProperty iconProperty = BindableProperty.Create(
-            nameof(icon),
-            typeof(PinImageDescriptor),
+        public static readonly BindableProperty imageProperty = BindableProperty.Create(
+            nameof(image),
+            typeof(string),
             typeof(Pin),
-            default(PinImageDescriptor),
+            default(string),
             BindingMode.OneWay);
-        public PinImageDescriptor icon
+        public string image
         {
-            get { return (PinImageDescriptor)GetValue(iconProperty); }
-            set { SetValue(iconProperty, value); }
+            get { return (string)GetValue(imageProperty); }
+            set { SetValue(imageProperty, value); }
         }
 
 		public static readonly BindableProperty IsCenterAndFlatProperty = BindableProperty.Create(

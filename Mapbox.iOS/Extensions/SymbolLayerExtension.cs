@@ -31,7 +31,7 @@ namespace Mapbox.iOS.Extensions
 				object[] offset = {pin.iconOffset.X, pin.iconOffset.Y}; //[x,y] coordinates Positive values indicate right and down
 				feature.Attributes = NSDictionary<NSString, NSObject>.FromObjectsAndKeys(
 					new object[]{
-						pin.GetStringImage(),
+						pin.image,
 						pin.heading,
 						pin.imageScaleFactor,
 						NSArray.FromObjects(offset),
