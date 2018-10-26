@@ -26,7 +26,7 @@ namespace MapBox.Android.Extensions
 				var feature = Feature.FromGeometry(
 					Point.FromLngLat(pin.position.longitude,
 									 pin.position.latitude));
-				feature.AddStringProperty(MapboxRenderer.pin_image_key, pin.GetStringImage());
+				feature.AddStringProperty(MapboxRenderer.pin_image_key, pin.image);
 				feature.AddNumberProperty(MapboxRenderer.pin_rotation_key, (Java.Lang.Number)pin.heading);
 				feature.AddNumberProperty(MapboxRenderer.pin_size_key, (Java.Lang.Number)pin.imageScaleFactor);
 				var offset = new GoogleGson.JsonArray(2); //[x,y] coordinates Positive values indicate right and down
