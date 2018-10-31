@@ -64,15 +64,23 @@ namespace MapBox.Android
 		private MapboxMap nMap;
 		private XMapbox.Map xMap;
 		private bool isPinAnimating;
-        static Context _context;
+
+        static Dictionary<string, Bitmap> _keyValues;
 
         public static void init(Context context, string accessToken)
 		{
-            _context = context;
-			// Initialize the token
+            // Initialize the token
 			Com.Mapbox.Mapboxsdk.Mapbox.GetInstance(context, accessToken);
 			Map.offlineService = DependencyService.Get<XMapbox.Offline.IOfflineStorageService>();
 		}
+
+        public static void init(Context context, string accessToken, Dictionary<string, Bitmap> keyValues)
+        {
+            _keyValues = keyValues;
+            // Initialize the token
+            Com.Mapbox.Mapboxsdk.Mapbox.GetInstance(context, accessToken);
+            Map.offlineService = DependencyService.Get<XMapbox.Offline.IOfflineStorageService>();
+        }
 
 		public MapboxRenderer(Context context) : base(context)
 		{
@@ -333,8 +341,16 @@ namespace MapBox.Android
 
 				// If any existing item does not yet exist
 				if (bitmap == null) {
-                    var imageBitmap = _context.Resources.GetBitmap(pin.image);
-                    nMap.AddImage(pin.image, imageBitmap);
+                    
+                    if(_keyValues.ContainsKey(pin.image))
+                    {
+                        var imageBitmap = _keyValues.FirstOrDefault(x=>x.Key.Equals(pin.image)).Value;
+                        nMap.AddImage(pin.image, imageBitmap);
+                    }
+                    else
+                    {
+                        throw new Exception("Image not found. Please add it in Init.");
+                    }
 
                     //using (var stream = pin.icon.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.icon.Width, pin.icon.Height))
                     //{
@@ -418,16 +434,24 @@ namespace MapBox.Android
 				updatePins(pin);
 			else {
 				// Otherwise add new
-                var imageBitmap = _context.Resources.GetBitmap(pin.image);
-                nMap.AddImage(key, imageBitmap);
+
+                if (_keyValues.ContainsKey(pin.image))
+                {
+                    var imageBitmap = _keyValues.FirstOrDefault(x => x.Key.Equals(pin.image)).Value;
+                    nMap.AddImage(key, imageBitmap);
+                    updatePins(pin);
+                }
+                else
+                {
+                    throw new Exception("Image not found. Please add it in Init.");
+                }
 
                 //using (var stream = key.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.icon.Width, pin.icon.Height))
                 //{
                 //    var newBitmap = BitmapFactory.DecodeStream(stream);
                 //    nMap.AddImage(key, newBitmap);
                 //}
-				
-				updatePins(pin);
+                //updatePins(pin);
 			}
 		}
 

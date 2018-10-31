@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <PackOnBuild>true</PackOnBuild>
     <PackageId>Mapbox.Mapcontrol.Forms</PackageId>
     <PackageVersion>1.0</PackageVersion>
     <Authors>Jelmar and Stephen</Authors>
