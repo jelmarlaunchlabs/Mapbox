@@ -140,6 +140,10 @@
     <ImageAsset Include="Assets.xcassets\AppIcon.appiconset\Icon20.png">
       <Visible>false</Visible>
     </ImageAsset>
+    <ImageAsset Include="Assets.xcassets\MapPinTaxi.imageset\Contents.json" />
+    <ImageAsset Include="Assets.xcassets\MapPinTaxi.imageset\MapPinTaxi.png" />
+    <ImageAsset Include="Assets.xcassets\MapPinTaxi.imageset\MapPinTaxi%402x.png" />
+    <ImageAsset Include="Assets.xcassets\MapPinTaxi.imageset\MapPinTaxi%403x.png" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -163,5 +167,8 @@
       <Project>{FBE953D5-AF3A-40AE-A870-AFE89B93715C}</Project>
       <Name>Mapbox.iOS</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Assets.xcassets\MapPinTaxi.imageset\" />
   </ItemGroup>
 </Project>

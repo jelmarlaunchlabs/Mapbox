@@ -25,11 +25,12 @@ using MapBox.Android.Extension;
 using MapBox.Abstractions;
 using MapBox.Models;
 using MapBox.Helpers;
+using AndroidOS = Android.OS;
 
 [assembly: ExportRenderer(typeof(MapBox.Map), typeof(MapBox.Android.MapboxRenderer))]
 namespace MapBox.Android
 {
-	public partial class MapboxRenderer : ViewRenderer<Map, NView>, IOnMapReadyCallback, MapboxMap.IOnMapClickListener, IMapFunctions, MapboxMap.IOnStyleLoadedListener
+    public partial class MapboxRenderer : ViewRenderer<Map, NView>, IOnMapReadyCallback, MapView.IOnMapChangedListener, MapboxMap.IOnMapClickListener, IMapFunctions, MapboxMap.IOnStyleLoadedListener
 	{
 		#region Pin constants
 		public const string mapLockedPinsKey = nameof(mapLockedPinsKey);
@@ -60,25 +61,24 @@ namespace MapBox.Android
 		public const string line_layer_key = nameof(line_layer_key);
 		#endregion
 
-		private MapViewFragment fragment;
 		private MapboxMap nMap;
 		private XMapbox.Map xMap;
 		private bool isPinAnimating;
 
         static Dictionary<string, Bitmap> _keyValues;
+        static AndroidOS.Bundle _bundle;
 
-        public static void init(Context context, string accessToken)
-		{
-            // Initialize the token
-			Com.Mapbox.Mapboxsdk.Mapbox.GetInstance(context, accessToken);
-			Map.offlineService = DependencyService.Get<XMapbox.Offline.IOfflineStorageService>();
-		}
-
-        public static void init(Context context, string accessToken, Dictionary<string, Bitmap> keyValues)
+        public static void init(Context context, AndroidOS.Bundle bundle, string accessToken, Dictionary<string, Bitmap> keyValues)
         {
             _keyValues = keyValues;
+            _bundle = bundle;
             // Initialize the token
             Com.Mapbox.Mapboxsdk.Mapbox.GetInstance(context, accessToken);
+
+            ////Disable Telemetry to minimize ANR error
+            //Com.Mapbox.Android.Telemetry.TelemetryEnabler.UpdateTelemetryState(Com.Mapbox.Android.Telemetry.TelemetryEnabler.State.Disabled);
+
+            // Offline Map
             Map.offlineService = DependencyService.Get<XMapbox.Offline.IOfflineStorageService>();
         }
 
@@ -107,13 +107,8 @@ namespace MapBox.Android
 				// Unsubscribe to changes in the collection first
 				if (map.routes != null)
 					map.routes.CollectionChanged -= Routes_CollectionChanged;
-
-				// Native map unsubscribe
-				if (nMap != null) {
-					nMap.CameraIdle -= NMap_CameraIdle;
-					nMap.CameraMoveStarted -= NMap_CameraMoveStarted;
-					nMap.CameraMove -= NMap_CameraMove;
-				}
+                
+                RemoveMapEvents();
 
 				removeAllPins(false);
 
@@ -134,41 +129,34 @@ namespace MapBox.Android
 
 		private void initializeControl()
 		{
-			var activity = (AppCompatActivity)Context;
-			var view = new FrameLayout(activity) {
-				Id = GenerateViewId()
-			};
+			Console.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff tt") + "[MapboxRenderer]: InitializeControl");
+            var mapView = new MapView(Context);
+            mapView.OnCreate(_bundle);
+            mapView.OnResume();
+            SetNativeControl(mapView);
 
-			fragment = new MapViewFragment();
-
-			activity.SupportFragmentManager.BeginTransaction()
-					.Replace(view.Id, fragment)
-					.CommitAllowingStateLoss();
-			fragment.GetMapAsync(this);
-
-			SetNativeControl(view);
+            mapView.GetMapAsync(this);
+            mapView.AddOnMapChangedListener(this);
+            Console.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff tt ") + "[MapboxRenderer]: InitializeControl " + mapView.ContentDescription);
 		}
 
 		public void OnMapReady(MapboxMap mapBox)
 		{
 			nMap = mapBox;
-            //nMap.SetStyle(Map.mapStyle);
             nMap.SetStyle(Map.mapStyle, this);
-			//nMap.SetStyle("mapbox://styles/mapbox/light-v9");
-            nMap.UiSettings.CompassEnabled = false;
+			nMap.UiSettings.CompassEnabled = false;
             nMap.AddOnMapClickListener(this);
             nMap.CameraIdle += NMap_CameraIdle;
             nMap.CameraMoveStarted += NMap_CameraMoveStarted;
             nMap.CameraMove += NMap_CameraMove;
 
-            // If cross map has not been assigned a value yet the retry initializations in the next x millisecond
             if (xMap == null)
                 return;
 
             if (xMap.initialCameraUpdate != null)
                 updateMapPerspective(xMap.initialCameraUpdate);
             
-            System.Diagnostics.Debug.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff tt") + "[MapboxRenderer]: Ready Ready Ready Ready Ready");
+            Console.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff tt") + "[MapboxRenderer]: OnMapReady");
 		}
 
 		#region Route initializers
@@ -627,7 +615,7 @@ namespace MapBox.Android
 			var pixel = nMap.Projection.ToScreenLocation(point);
 			var features = nMap.QueryRenderedFeatures(pixel, mapLockedPinsKey, normalPinsKey);
 
-			System.Diagnostics.Debug.WriteLine($"Features: {features}");
+			Console.WriteLine($"Features: {features}");
 
 			if (features.Any() && xMap.pinClickedCommand != null)
 			{
@@ -707,7 +695,7 @@ namespace MapBox.Android
 
         public void OnStyleLoaded(string p0)
         {
-            System.Diagnostics.Debug.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff tt") + "[MapboxRenderer]: Loaded Loaded Loaded Loaded Loaded - " + p0);
+            Console.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff tt") + "[MapboxRenderer]: OnStyleLoaded - " + p0);
 
             // Initialize route first so that it will be the first in the layer list z-index = 0
             initializeRoutesLayer();
@@ -719,16 +707,45 @@ namespace MapBox.Android
             addAllPins();
 
             // Then subscribe to pins added
-            if (xMap.pins != null)
+            if (xMap?.pins != null)
                 xMap.pins.CollectionChanged += Pins_CollectionChanged;
-            if (xMap.DefaultPins != null)
+            if (xMap?.DefaultPins != null)
                 xMap.DefaultPins.CollectionChanged += DefaultPins_CollectionChanged;
 
-            if (xMap.routes != null)
+            if (xMap?.routes != null)
                 xMap.routes.CollectionChanged += Routes_CollectionChanged;
 
             // Subscribe to changes in map bindable properties after all pins are loaded
-            xMap.PropertyChanged += Map_PropertyChanged;
+            if(xMap != null)
+                xMap.PropertyChanged += Map_PropertyChanged;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            RemoveMapEvents();
+
+            //// Kill app to minimize ANR error
+            //AndroidOS.Process.KillProcess(AndroidOS.Process.MyPid());
+
+            base.Dispose(disposing);
+        }
+
+        void RemoveMapEvents()
+        {
+            // Native map unsubscribe
+            if (nMap != null)
+            {
+                nMap.CameraIdle -= NMap_CameraIdle;
+                nMap.CameraMoveStarted -= NMap_CameraMoveStarted;
+                nMap.CameraMove -= NMap_CameraMove;
+
+                nMap.RemoveOnMapClickListener(this);
+            }
+        }
+
+        public void OnMapChanged(int p0)
+        {
+            Console.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff tt") + "[MapboxRenderer]: OnMapChanged - " + p0);
         }
     }
 }

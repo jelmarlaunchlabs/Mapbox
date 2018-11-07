@@ -19,69 +19,69 @@ namespace MapboxTester
 		{
 			InitializeComponent();
 
-			//map.initialCameraUpdate = CameraPerspectiveFactory.fromCenterAndZoomLevel(new Position(10.309852, 123.893151), 10);
+			map.initialCameraUpdate = CameraPerspectiveFactory.fromCenterAndZoomLevel(new Position(10.318342, 123.90506), 20);
 
 			map.pins.Add(new Pin {
 				id = "1",
-				image = "Resources.car.png",
+				image = "MapPinTaxi",
 				IsCenterAndFlat = true,
 				heading = 0,
 				position = new Position(10.318342, 123.90506)
 			});
 			map.pins.Add(new Pin {
 				id = "2",
-				image = "Resources.car.png",
+				image = "MapPinTaxi",
 				IsCenterAndFlat = true,
 				heading = 0,
 				position = new Position(10.31581, 123.97906)
 			});
 			map.pins.Add(new Pin {
 				id = "3",
-				image = "Resources.car.png",
+				image = "MapPinTaxi",
 				IsCenterAndFlat = true,
 				heading = 0,
 				position = new Position(10.304416, 123.91161)
 			});
 			map.pins.Add(new Pin {
-				image = "Resources.car.png",
+				image = "MapPinTaxi",
 				IsCenterAndFlat = true,
 				heading = 0,
 				position = new Position(10.311782, 123.91805)
 			});
 
-			bool flag = true;
+			//bool flag = true;
 
-			Device.StartTimer(TimeSpan.FromSeconds(3), () => {
-				map.pins.Clear();
+			//Device.StartTimer(TimeSpan.FromSeconds(3), () => {
+			//	map.pins.Clear();
 
-				map.pins.Add(new Pin {
-					image = "Resources.car.png",
-					IsCenterAndFlat = false,
-					position = new Position(0, 0)
-				});
-				map.pins.Add(new Pin {
-					image = "Resources.car.png",
-					IsCenterAndFlat = false,
-					position = new Position(flag ? 20 : -20, flag ? 20 : -20)
-				});
+			//	map.pins.Add(new Pin {
+			//		image = "MapPinTaxi",
+			//		IsCenterAndFlat = false,
+			//		position = new Position(0, 0)
+			//	});
+			//	map.pins.Add(new Pin {
+			//		image = "MapPinTaxi",
+			//		IsCenterAndFlat = false,
+			//		position = new Position(flag ? 20 : -20, flag ? 20 : -20)
+			//	});
 
-				map.routes.Clear();
-				var points = new ObservableCollection<Position>();
-				if (flag)
-					for (int i = 0; i < 20; i++) {
-						points.Add(new Position(i, i));
-					} else
-					for (int i = 0; i > -20; i--) {
-						points.Add(new Position(i, i));
-					}
-				map.routes.Add(
-					new Route {
-						points = points
-					});
+			//	map.routes.Clear();
+			//	var points = new ObservableCollection<Position>();
+			//	if (flag)
+			//		for (int i = 0; i < 20; i++) {
+			//			points.Add(new Position(i, i));
+			//		} else
+			//		for (int i = 0; i > -20; i--) {
+			//			points.Add(new Position(i, i));
+			//		}
+			//	map.routes.Add(
+			//		new Route {
+			//			points = points
+			//		});
 
-				flag = !flag;
-				return true;
-			});
+			//	flag = !flag;
+			//	return true;
+			//});
 
 			//Device.StartTimer(TimeSpan.FromSeconds(10), () => {
 			//	map.pins[0].isVisible = false;
@@ -105,30 +105,26 @@ namespace MapboxTester
 			//// Initialize pins
 			//map.pins = new ObservableCollection<Pin>{
 			//	//new Pin{
-			//	//	image = "Resources.car.png",
+			//	//	image = "MapPinTaxi",
 			//	//	IsCenterAndFlat = false,
 			//	//	heading = 0,
 			//	//	position = new Position(0,0),
 			//	//	iconOffset = new Point(0,-50)
 			//	//},
 			//	new Pin{
-			//		image = "Resources.car.png",
+			//		image = "MapPinTaxi",
 			//		IsCenterAndFlat = true,
 			//		heading = 180,
-			//		position = new Position(-5,-5),
-			//		width = 90,
-			//		height = 90
+			//		position = new Position(-5,-5)
 			//	},
 			//	new Pin{
-			//		image = "Resources.car.png",
+			//		image = "MapPinTaxi",
 			//		IsCenterAndFlat = true,
 			//		heading = 270,
-			//		position = new Position(5,5),
-			//		width = 90,
-			//		height = 90
+			//		position = new Position(5,5)
 			//	},
 			//	//new Pin{
-			//	//	image = "Resources.car.png",
+			//	//	image = "MapPinTaxi",
 			//	//	IsCenterAndFlat = true,
 			//	//	heading = 45,
 			//	//	position = new Position(3,3)
@@ -215,7 +211,7 @@ namespace MapboxTester
 			////Device.StartTimer(TimeSpan.FromSeconds(10), () => {
 			////	map.pins.Add(
 			////		new Pin {
-			////			image = "Resources.carBlack.jpg",
+			////			image = "MapPinTaxi",
 			////			IsCenterAndFlat = true,
 			////			heading = 90,
 			////			position = new Position(4, 4)
@@ -248,7 +244,7 @@ namespace MapboxTester
 			////			Device.StartTimer(TimeSpan.FromSeconds(5), () => {
 			////				map.pins = new ObservableCollection<Pin>{
 			////					new Pin{
-			////						image = "Resources.car.png",
+			////						image = "MapPinTaxi",
 			////						IsCenterAndFlat = true,
 			////						heading = 180,
 			////						position = new Position(1,1),
@@ -291,9 +287,9 @@ namespace MapboxTester
 			map.CameraIdled += Map_CameraIdled;
 			map.MapClicked += Map_MapClicked;
 
-			map.DefaultPins = new ObservableCollection<DefaultPin>();
+			//map.DefaultPins = new ObservableCollection<DefaultPin>();
 
-			map.pinClickedCommand = new Command<Pin>((pin) => { Console.WriteLine("Pin Clicked: ID - " + pin.id); });
+			//map.pinClickedCommand = new Command<Pin>((pin) => { Console.WriteLine("Pin Clicked: ID - " + pin.id); });
 
 			//Device.StartTimer(TimeSpan.FromSeconds(3), () => {
 			//	offlineService = DependencyService.Get<IOfflineStorageService>();
@@ -387,7 +383,7 @@ namespace MapboxTester
 			Console.WriteLine("Camera Move Started");
 			mapAction.Text = "Camera Move Started";
 
-			map.DefaultPins.Clear();
+			//map.DefaultPins.Clear();
 		}
 
 		void Map_CameraMoving(object sender, EventArgs e)
