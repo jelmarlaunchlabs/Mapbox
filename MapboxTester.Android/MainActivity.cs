@@ -6,6 +6,8 @@ using Android.Runtime;
 using Android.Views;
 using Android.Widget;
 using Android.OS;
+using System.Collections.Generic;
+using Android.Graphics;
 
 namespace MapboxTester.Droid
 {
@@ -19,11 +21,15 @@ namespace MapboxTester.Droid
 
             base.OnCreate(savedInstanceState);
             global::Xamarin.Forms.Forms.Init(this, savedInstanceState);
-			MapBox.Android.MapboxRenderer.init(this, "pk.eyJ1IjoiY3Jvd2VsbW8iLCJhIjoiY2ptNjU5MnFoMTdlYTN3bjIxdDRlb3Q4MyJ9.kg7ws7RpJ4nIKL8C31nBDw");
-			LoadApplication(new App());
 
-            ////Need to initialize after LoadApplication(new App()) so that the user of the map (this) context will have its map NOT EQUAL to null
-            //MapBox.Android.MapboxRenderer.init(this, "pk.eyJ1IjoiY3Jvd2VsbW8iLCJhIjoiY2ptNjU5MnFoMTdlYTN3bjIxdDRlb3Q4MyJ9.kg7ws7RpJ4nIKL8C31nBDw");
+			//Passing the Bitmap for Drawable Pins.
+			Dictionary<string, Bitmap> nameToBitmap = new Dictionary<string, Bitmap>();
+			nameToBitmap.Add("MapPinTaxi", BitmapFactory.DecodeResource(this.Resources, Resource.Drawable.MapPinTaxi));
+			nameToBitmap.Add("MapPinOrigin", BitmapFactory.DecodeResource(this.Resources, Resource.Drawable.MapPinOrigin));
+			nameToBitmap.Add("MapPinDestination", BitmapFactory.DecodeResource(this.Resources, Resource.Drawable.MapPinDestination));
+			MapBox.Android.MapboxRenderer.init(this, savedInstanceState, "pk.eyJ1IjoiY3Jvd2VsbW8iLCJhIjoiY2ptNjU5MnFoMTdlYTN3bjIxdDRlb3Q4MyJ9.kg7ws7RpJ4nIKL8C31nBDw", nameToBitmap);
+
+			LoadApplication(new App());
         }
     }
 }

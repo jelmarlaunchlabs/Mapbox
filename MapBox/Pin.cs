@@ -49,38 +49,6 @@ namespace MapBox
 			set { SetValue(headingProperty, value); }
 		}
 
-		public static readonly BindableProperty widthProperty = BindableProperty.Create(
-			nameof(width),
-			typeof(double),
-			typeof(Pin),
-			(double)50,
-			BindingMode.OneWay);
-		/// <summary>
-		/// Note this is the base image width, the final width will be decided by setting the factor
-		/// The width is already scaled!!!
-		/// </summary>
-		/// <value>The width.</value>
-		public double width {
-			get { return (double)GetValue(widthProperty); }
-			set { SetValue(widthProperty, value); }
-		}
-
-		public static readonly BindableProperty heightProperty = BindableProperty.Create(
-			nameof(height),
-			typeof(double),
-			typeof(Pin),
-			(double)50,
-			BindingMode.OneWay);
-		/// <summary>
-		/// Note this is the base image height, the final height will be decided by setting the factor
-		/// The height is already scaled!!!
-		/// </summary>
-		/// <value>The height.</value>
-		public double height {
-			get { return (double)GetValue(heightProperty); }
-			set { SetValue(heightProperty, value); }
-		}
-
 		public static readonly BindableProperty imageScaleFactorProperty = BindableProperty.Create(
 			nameof(imageScaleFactor),
 			typeof(double),

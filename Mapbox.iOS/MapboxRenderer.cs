@@ -288,12 +288,8 @@ namespace Mapbox.iOS
 				// If any existing item does not yet exist
 				if (uiImage == null) {
 					// Then add new image
-					using (var stream = pin.image.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.width, pin.height)) {
-						using (var imageData = NSData.FromStream(stream)) {
-							var newUIImage = UIImage.LoadFromData(imageData);
-							nStyle.SetImage(newUIImage, pin.image);
-						}
-					}
+					UIImage newUIImage = UIImage.FromBundle(pin.image);
+					nStyle.SetImage(newUIImage, pin.image);
 				}
 			}
 		}
@@ -371,13 +367,8 @@ namespace Mapbox.iOS
 			else {
 				// Otherwise add new
 
-				//New image
-				using (var stream = pin.image.getRawStremFromEmbeddedResource(xMap.callerAssembly, pin.width, pin.height)) {
-					using (var imageData = NSData.FromStream(stream)) {
-						var newUIImage = UIImage.LoadFromData(imageData);
-						nStyle.SetImage(newUIImage, key);
-					}
-				}
+				UIImage newUIImage = UIImage.FromBundle(pin.image);
+				nStyle.SetImage(newUIImage, pin.image);
 
 				updatePins(pin);
 			}

@@ -7,8 +7,6 @@
     <Grid>
         <mapbox:Map x:Name="map"/>
         <Label x:Name="mapAction" Text="" FontSize="12" TextColor="Red" VerticalTextAlignment="Center" HorizontalTextAlignment="Center" InputTransparent="true" Margin="0,30,0,0" VerticalOptions="Start" HorizontalOptions="Center"/>
-        <!--<mapbox:TestImage HorizontalOptions="Center"
-                      VerticalOptions="Center"/>-->
         <ScrollView Margin="0,0,0,30" Orientation="Horizontal" VerticalOptions="End">
             <StackLayout Orientation="Horizontal" Spacing="10">
                 <Button Text="Heading" Clicked="Heading_Clicked" HeightRequest="40" WidthRequest="150" FontSize="12" TextColor="White" BackgroundColor="Gray" VerticalOptions="End" HorizontalOptions="Center"/>
